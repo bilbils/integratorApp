@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { adminLogin } from '../../services/auth.js';
+import { wrap } from '../async.js';
 
 export const authRouter = Router();
 
@@ -9,7 +10,7 @@ const LoginBody = z.object({
   password: z.string().min(1),
 });
 
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', wrap(async (req, res) => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });
@@ -21,4 +22,4 @@ authRouter.post('/login', async (req, res) => {
     return;
   }
   res.json({ token });
-});
+}));

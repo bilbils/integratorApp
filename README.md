@@ -30,7 +30,9 @@ Plaid and Nango come next as connectors 2 and 3.
 - **DB:** Postgres. Dev is Supabase-hosted; code is plain SQL / standard
   Postgres only, so moving to Azure Database for PostgreSQL later is a
   connection-string swap.
-- **Frontend:** Angular admin UI - **next commit** (not in this one).
+- **Frontend:** Angular admin UI in `/web` - login + a filterable highlights
+  list. Talks to the API at `http://localhost:3000/api/v1` (see
+  `web/src/environments/environment.ts`).
 - **Hosting target:** Azure.
 
 ## Layout
@@ -81,8 +83,8 @@ npm run mcp               # MCP server on stdio
 |--------|-------------------------|-------------------|----------------------------|
 | GET    | `/health`               | none              | liveness                   |
 | POST   | `/api/v1/highlights`    | `Bearer <INGEST_TOKEN>` | capture a highlight  |
-| GET    | `/api/v1/highlights`    | `Bearer <consumer key>` | list (filterable)    |
-| GET    | `/api/v1/highlights/:id`| `Bearer <consumer key>` | single highlight     |
+| GET    | `/api/v1/highlights`    | `Bearer <admin JWT or consumer key>` | list (filterable) |
+| GET    | `/api/v1/highlights/:id`| `Bearer <admin JWT or consumer key>` | single highlight  |
 | POST   | `/api/v1/auth/login`    | none (email+pw)   | admin login -> JWT         |
 
 List filters: `project`, `outcome`, `since` (ISO), `significance_min`, `limit`.
@@ -116,10 +118,20 @@ e.g.:
 - **Machine access:** per-consumer API keys (hashed in `consumer_apps`) for
   reads; a single `INGEST_TOKEN` for capture. Per-source ingest keys come later.
 
+## Run the admin UI
+
+```bash
+cd web
+npm install
+npm start        # dev server on http://localhost:4200 (API must be running on :3000)
+```
+
+Sign in with the seeded admin user; the highlights list uses your admin session
+(the read routes accept an admin JWT OR a consumer key).
+
 ## Notes / next
 
-- Angular admin UI (login + filterable highlights list) is the next commit.
-- Seed an admin user and a consumer app once the DB is up (helper scripts TBD).
 - `credentials` table is deferred until the Plaid connector.
+- Read routes accept either an admin session or a consumer key (`requireReader`).
 
 Editing workflow: staged for review, pushed via GitHub Desktop. No auto-push.

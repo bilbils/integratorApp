@@ -29,3 +29,12 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   req.admin = admin;
   next();
 }
+
+/** Read access: a valid admin session OR a valid consumer key. */
+export async function requireReader(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const admin = verifyAdminJwt(bearer(req));
+  if (admin) { req.admin = admin; next(); return; }
+  const consumer = await verifyConsumerKey(bearer(req));
+  if (consumer) { req.consumer = consumer; next(); return; }
+  res.status(401).json({ error: 'unauthorized' });
+}
