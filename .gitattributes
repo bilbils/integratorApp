@@ -1,0 +1,3 @@
+# Normalize line endings to LF for this Node/Angular repo so diffs stay clean
+# across machines. (Deviates from the usual CRLF default on purpose.)
+* text=auto eol=lf
