@@ -10,3 +10,8 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+# secrets & local backups — never commit
+.env.broken-backup
+*.broken-backup
+_to_delete/
