@@ -137,6 +137,62 @@
   .placeholder{background:#fff;border:1.5px dashed #c2d0da;border-radius:13px;padding:40px;text-align:center;color:#6b8195;}
   .placeholder h3{margin:0 0 6px;color:var(--navy);font-size:16px;}
   .placeholder p{margin:0;font-size:13px;max-width:520px;margin:0 auto;}
+
+  /* Architecture tab */
+  .archwrap{padding:16px 26px 44px;}
+  .arch-nownext{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:640px){.arch-nownext{grid-template-columns:1fr;}}
+  .arch-nn{border-radius:11px;padding:14px 17px;border:1.5px solid var(--line);background:#fff;box-shadow:0 1px 4px rgba(12,35,64,.05);}
+  .arch-nn.now{border-left:5px solid var(--cyan);}
+  .arch-nn.next{border-left:5px solid var(--yellow);}
+  .arch-nn .k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0079a3;margin-bottom:5px;}
+  .arch-nn.next .k{color:#8a6600;}
+  .arch-nn .v{font-size:13.5px;color:var(--navy);font-weight:600;}
+  .arch-nn .v span{font-weight:400;color:#5b7185;font-size:12.5px;}
+  .zone2{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#5b7185;margin:26px 0 12px;}
+  .phases{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media(max-width:760px){.phases{grid-template-columns:1fr;}}
+  .phase{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:16px 17px;box-shadow:0 2px 6px rgba(12,35,64,.05);}
+  .phase.done{border-top:4px solid var(--cyan);}
+  .phase.prog{border-top:4px solid var(--yellow);}
+  .phase.prop{border-top:4px solid #9fb2bf;}
+  .phase .pnum{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em;}
+  .phase h3{margin:3px 0 6px;font-size:16px;font-weight:700;}
+  .phase p{margin:0;font-size:12.5px;color:#48627a;}
+  .pstatus{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:20px;margin-top:11px;}
+  .ps-done{background:rgba(0,169,223,.14);color:#0079a3;}
+  .ps-prog{background:rgba(255,198,45,.2);color:#8a6600;}
+  .ps-prop{background:#eef2f5;color:#68798a;}
+  .alegend{display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:16px;}
+  .alegend .c{display:inline-flex;align-items:center;gap:7px;}
+  .adot{width:13px;height:13px;border-radius:4px;display:inline-block;}
+  .ad-built{background:var(--cyan);}
+  .ad-prog{background:var(--yellow);}
+  .ad-prop{background:transparent;border:2px dashed #9fb2bf;}
+  .alayer{margin-bottom:12px;}
+  .allabel{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7c92a6;margin:0 0 7px;}
+  .acomps{display:grid;gap:10px;}
+  .ac4{grid-template-columns:repeat(4,1fr);}
+  .ac3{grid-template-columns:repeat(3,1fr);}
+  .ac2{grid-template-columns:1fr 1fr;}
+  @media(max-width:760px){.ac4,.ac3,.ac2{grid-template-columns:1fr 1fr;}}
+  @media(max-width:520px){.ac4,.ac3,.ac2{grid-template-columns:1fr;}}
+  .acomp{background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;position:relative;box-shadow:0 1px 3px rgba(12,35,64,.05);}
+  .acomp.built{border-left:5px solid var(--cyan);}
+  .acomp.prog{border-left:5px solid var(--yellow);}
+  .acomp.prop{border-style:dashed;border-color:#b7c6d1;}
+  .acomp h4{margin:0 0 2px;font-size:13.5px;font-weight:700;}
+  .acomp.prop h4{color:#54697c;}
+  .acomp p{margin:0;font-size:11.5px;color:#6b8195;line-height:1.4;}
+  .acomp.core{background:var(--navy);}
+  .acomp.core h4{color:#fff;}
+  .acomp.core p{color:#bcccd9;}
+  .atick{position:absolute;top:10px;right:11px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;}
+  .at-built{color:#0079a3;}
+  .acomp.core .at-built{color:#7fdcff;}
+  .at-prog{color:#8a6600;}
+  .at-prop{color:#8496a5;}
+  .aflow{text-align:center;color:#8aab00;font-size:16px;margin:2px 0 8px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -159,6 +215,7 @@
   <button onclick="switchView('aggregators',this)">Aggregators <span class="cnt">3</span></button>
   <button onclick="switchView('apps',this)">Consumer Apps <span class="cnt">4</span></button>
   <button onclick="switchView('grants',this)">Access Grants</button>
+  <button onclick="switchView('architecture',this)">Architecture</button>
 </nav>
 
 <div class="view show" id="view-agents">
@@ -198,6 +255,60 @@
 <div class="view" id="view-grants">
   <div class="toolbar"><div><h2>Access Grants</h2><div class="note">The grid that ties it all together: which app may call which agent and read which aggregator.</div></div></div>
   <div style="padding:14px 26px 40px"><div class="placeholder"><h3>Access Grants — the connective tissue</h3><p>One simple matrix: apps down the side, agents + aggregators across the top, a checkbox where they meet. This is where "available to all, private to each" actually gets enforced.</p></div></div>
+</div>
+
+<div class="view" id="view-architecture">
+  <div class="toolbar">
+    <div>
+      <h2>Architecture</h2>
+      <div class="note">Actual vs proposed — where the platform is now and what's ahead. Kept current as we build, so it always matches reality.</div>
+    </div>
+  </div>
+  <div class="archwrap">
+    <div class="arch-nownext">
+      <div class="arch-nn now"><div class="k">✓ Where we are now</div><div class="v">v1 AI-highlights vertical is LIVE end-to-end. <span>API + database + MCP + Angular UI, login working, highlights rendering — the whole platform spine is proven.</span></div></div>
+      <div class="arch-nn next"><div class="k">→ Next up</div><div class="v">Build the AI gateway — this AI-Agents registry. <span>Designed and mocked (you're looking at it). Next: the table + service + one Angular screen on the proven spine.</span></div></div>
+    </div>
+
+    <div class="zone2">Build roadmap — three phases</div>
+    <div class="phases">
+      <div class="phase done"><div class="pnum">Phase 1</div><h3>Prove the spine</h3><p>The AI-highlights vertical, end-to-end — exercises every layer of the platform.</p><span class="pstatus ps-done">✓ Done — running</span></div>
+      <div class="phase prog"><div class="pnum">Phase 2</div><h3>AI gateway</h3><p>Editable AI-Agents registry — cheapest capable model per job, per-app cost. Design locked, mock live.</p><span class="pstatus ps-prog">◐ In progress — designed</span></div>
+      <div class="phase prop"><div class="pnum">Phase 3</div><h3>Aggregator connectors</h3><p>Plaid / Nango / Plaud inbound connectors on the proven spine. New adapter each, not a core rewrite.</p><span class="pstatus ps-prop">○ Proposed — later</span></div>
+    </div>
+
+    <div class="zone2">Actual vs proposed</div>
+    <div class="alegend">
+      <span class="c"><span class="adot ad-built"></span> Built &amp; running (actual)</span>
+      <span class="c"><span class="adot ad-prog"></span> In progress (designed)</span>
+      <span class="c"><span class="adot ad-prop"></span> Proposed (later)</span>
+    </div>
+
+    <div class="alayer"><p class="allabel">Consumer apps</p><div class="acomps ac4">
+      <div class="acomp prog"><span class="atick at-prog">next</span><h4>Staffility</h4><p>First gateway consumer.</p></div>
+      <div class="acomp built"><span class="atick at-built">built</span><h4>Bills-Master-Plan</h4><p>Reads highlights via MCP.</p></div>
+      <div class="acomp prop"><span class="atick at-prop">later</span><h4>IPTA tools</h4><p>Same door when needed.</p></div>
+      <div class="acomp prop"><span class="atick at-prop">later</span><h4>Blue Orbit</h4><p>Same door when needed.</p></div>
+    </div></div>
+    <div class="aflow">▲ read through API / MCP — never direct DB ▲</div>
+
+    <div class="alayer"><p class="allabel">Access layer — two doors</p><div class="acomps ac2">
+      <div class="acomp core built"><span class="atick at-built">built</span><h4>REST API</h4><p>Versioned HTTP. Login + highlights. CORS enabled for the UI.</p></div>
+      <div class="acomp core built"><span class="atick at-built">built</span><h4>MCP Server</h4><p>Second door for AI-agent consumers.</p></div>
+    </div></div>
+    <div class="aflow">▼</div>
+
+    <div class="alayer"><p class="allabel">Service &amp; data — the core</p><div class="acomps ac2">
+      <div class="acomp core built"><span class="atick at-built">built</span><h4>Shared service layer</h4><p>Node/Express + TypeScript. One source of truth; both doors call it.</p></div>
+      <div class="acomp core built"><span class="atick at-built">built</span><h4>PostgreSQL</h4><p>Supabase dev → Azure later (connection-string swap). Migrated, RLS on, seeded.</p></div>
+    </div></div>
+
+    <div class="alayer" style="margin-top:14px"><p class="allabel">Connectors</p><div class="acomps ac3">
+      <div class="acomp built"><span class="atick at-built">built</span><h4>AI-Capture <span style="font-weight:500;color:#8aa0b2;font-size:11px">inbound</span></h4><p>AI tools push session highlights in via MCP.</p></div>
+      <div class="acomp prog"><span class="atick at-prog">designed</span><h4>AI Gateway <span style="font-weight:500;color:#b08a2f;font-size:11px">outbound</span></h4><p>This editable AI-Agents registry.</p></div>
+      <div class="acomp prop"><span class="atick at-prop">proposed</span><h4>Aggregators</h4><p>Plaid / Nango / Plaud — credentials + data handling.</p></div>
+    </div></div>
+  </div>
 </div>
 
 <div class="footer">
