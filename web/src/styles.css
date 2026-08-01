@@ -307,3 +307,27 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 0 0 8px 8px;
 }
 .foot-right { display: flex; align-items: center; gap: 12px; }
+
+/* --- Apps & Access screen ------------------------------------------------ */
+
+/* Shown once, right after a key is minted or rotated. Loud on purpose. */
+.keycard { border-color: var(--cyan); box-shadow: 0 3px 12px rgba(0, 169, 223, 0.15); margin-bottom: 18px; }
+.keycard-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.keycard .linkbtn { color: var(--muted); }
+.keycard .linkbtn:hover { color: var(--navy); }
+.keycard p { margin: 6px 0 12px; }
+.keyvalue {
+  display: block; margin-bottom: 12px; padding: 11px 13px;
+  background: var(--panel-sunk); border: 1.5px solid var(--border); border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px; color: var(--navy); word-break: break-all; user-select: all;
+}
+
+.grantrow { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+.grantrow .switch-row { min-width: 170px; }
+.permsel { padding: 5px 9px; font-size: 12.5px; border-radius: 6px; }
+
+.keyfacts { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: center; margin-top: 12px; }
+@media (max-width: 640px) { .keyfacts { grid-template-columns: 1fr; } }
+.keyfacts > div { display: flex; flex-direction: column; gap: 2px; }
+.keyfacts b { font-size: 14px; font-weight: 700; word-break: break-all; }

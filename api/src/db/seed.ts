@@ -31,13 +31,18 @@ async function main(): Promise<void> {
   );
   console.log(`Admin user ready: ${email}`);
 
-  const apiKey = randomBytes(24).toString('hex');
-  const keyHash = await bcrypt.hash(apiKey, 10);
+  // Key format matches what the admin screen mints: int_<key_id>_<secret>,
+  // where only the secret half is hashed. See migration 004.
+  const keyId = randomBytes(6).toString('hex');
+  const secret = randomBytes(16).toString('hex');
+  const apiKey = `int_${keyId}_${secret}`;
+  const keyHash = await bcrypt.hash(secret, 10);
   const { rows } = await pool.query<{ id: string }>(
-    `insert into consumer_apps (name, api_key_hash) values ($1, $2)
-     on conflict (name) do update set api_key_hash = excluded.api_key_hash
+    `insert into consumer_apps (name, api_key_hash, key_id) values ($1, $2, $3)
+     on conflict (name) do update set api_key_hash = excluded.api_key_hash,
+                                      key_id       = excluded.key_id
      returning id`,
-    [consumerName, keyHash],
+    [consumerName, keyHash, keyId],
   );
   const consumerId = rows[0].id;
 

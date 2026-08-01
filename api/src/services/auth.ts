@@ -12,16 +12,56 @@ export function checkIngestToken(token: string | undefined): boolean {
 }
 
 /**
- * Consumer read auth. v1 scans active consumer_apps and bcrypt-compares.
- * Fine for a handful of consumers; swap to a keyed lookup if the list grows.
+ * Consumer keys look like `int_<key_id>_<secret>`.
+ *
+ * key_id is public (it's an identifier, not a credential) and is what makes the
+ * lookup a single indexed row read. Only the secret half is bcrypt-hashed and
+ * stored. See migration 004 for why.
+ */
+const KEYED = /^int_([0-9a-f]{12})_([0-9a-f]{32})$/;
+
+interface ConsumerRow { id: string; name: string; api_key_hash: string; }
+
+/** Fire-and-forget: "last seen" is for the admin screen, never on the hot path. */
+function touch(id: string): void {
+  pool
+    .query(`update consumer_apps set last_used_at = now() where id = $1`, [id])
+    .catch((err) => console.error('last_used_at update failed:', err));
+}
+
+/**
+ * Consumer read auth.
+ *
+ * Keyed path: one indexed lookup + one bcrypt compare.
+ * Legacy path: keys minted before migration 004 have no key_id, so they still
+ * fall back to the old scan-and-compare. Rotating a key moves it to the fast
+ * path; the fallback can be deleted once no unkeyed rows remain.
  */
 export async function verifyConsumerKey(key: string | undefined): Promise<ConsumerIdentity | null> {
   if (!key) return null;
-  const { rows } = await pool.query<{ id: string; name: string; api_key_hash: string }>(
-    `select id, name, api_key_hash from consumer_apps where active = true`,
+
+  const match = KEYED.exec(key);
+  if (match) {
+    const [, keyId, secret] = match;
+    const { rows } = await pool.query<ConsumerRow>(
+      `select id, name, api_key_hash from consumer_apps where key_id = $1 and active = true`,
+      [keyId],
+    );
+    const app = rows[0];
+    if (!app) return null;
+    if (!(await bcrypt.compare(secret, app.api_key_hash))) return null;
+    touch(app.id);
+    return { id: app.id, name: app.name };
+  }
+
+  const { rows } = await pool.query<ConsumerRow>(
+    `select id, name, api_key_hash from consumer_apps where active = true and key_id is null`,
   );
   for (const r of rows) {
-    if (await bcrypt.compare(key, r.api_key_hash)) return { id: r.id, name: r.name };
+    if (await bcrypt.compare(key, r.api_key_hash)) {
+      touch(r.id);
+      return { id: r.id, name: r.name };
+    }
   }
   return null;
 }

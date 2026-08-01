@@ -299,7 +299,8 @@ export class AgentsComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.api.getConsumerApps().subscribe({
+    // Only live apps belong in an access picker.
+    this.api.getConsumerApps(false).subscribe({
       next: (rows) => this.apps.set(rows),
       error: () => this.apps.set([]),
     });

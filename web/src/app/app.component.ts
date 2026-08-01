@@ -16,6 +16,7 @@ import { AuthService } from './core/auth.service';
         <nav class="nav">
           <a routerLink="/highlights" routerLinkActive="active">Highlights</a>
           <a routerLink="/agents" routerLinkActive="active">AI Agents</a>
+          <a routerLink="/apps" routerLinkActive="active">Apps &amp; Access</a>
         </nav>
         <button class="linkbtn" (click)="logout()">Log out</button>
       }
@@ -27,11 +28,13 @@ export class AppComponent {
   auth = inject(AuthService);
   private router = inject(Router);
 
-  /** The agents screen is a two-pane editor and needs more room than a list. */
+  /** The two-pane editor screens need more room than a plain list. */
   readonly wide = signal(false);
 
   constructor() {
-    this.router.events.subscribe(() => this.wide.set(this.router.url.startsWith('/agents')));
+    this.router.events.subscribe(() =>
+      this.wide.set(/^\/(agents|apps)/.test(this.router.url)),
+    );
   }
 
   logout(): void {

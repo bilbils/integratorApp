@@ -76,11 +76,45 @@ export interface AgentWrite {
   allowed_app_ids?: string[];
 }
 
+// --- Consumer apps & connector access ---------------------------------------
+
+export type Permission = 'read' | 'sync';
+
+export interface ConnectorGrant {
+  connector_id: string;
+  connector_key: string;
+  kind: 'inbound' | 'outbound';
+  permission: Permission;
+}
+
+export interface Connector {
+  id: string;
+  key: string;
+  kind: 'inbound' | 'outbound';
+  active: boolean;
+}
+
 export interface ConsumerApp {
   id: string;
   name: string;
   active: boolean;
+  key_id: string | null;
+  last_used_at: string | null;
   created_at: string;
+  grants: ConnectorGrant[];
+  agent_count: number;
+}
+
+export interface ConsumerAppWrite {
+  name?: string;
+  active?: boolean;
+  grants?: { connector_id: string; permission: Permission }[];
+}
+
+/** The API key is present only in a create or rotate response. */
+export interface MintedKey {
+  app: ConsumerApp;
+  api_key: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -122,7 +156,39 @@ export class ApiService {
     return this.http.delete<void>(`${this.base}/agents/${id}`, { headers: this.headers() });
   }
 
-  getConsumerApps(): Observable<ConsumerApp[]> {
-    return this.http.get<ConsumerApp[]>(`${this.base}/consumer-apps`, { headers: this.headers() });
+  getConsumerApps(includeInactive = true): Observable<ConsumerApp[]> {
+    const params = new HttpParams().set('include_inactive', String(includeInactive));
+    return this.http.get<ConsumerApp[]>(`${this.base}/consumer-apps`, {
+      headers: this.headers(),
+      params,
+    });
+  }
+
+  getConnectors(): Observable<Connector[]> {
+    return this.http.get<Connector[]>(`${this.base}/consumer-apps/connectors`, {
+      headers: this.headers(),
+    });
+  }
+
+  createConsumerApp(body: ConsumerAppWrite): Observable<MintedKey> {
+    return this.http.post<MintedKey>(`${this.base}/consumer-apps`, body, { headers: this.headers() });
+  }
+
+  updateConsumerApp(id: string, body: ConsumerAppWrite): Observable<ConsumerApp> {
+    return this.http.patch<ConsumerApp>(`${this.base}/consumer-apps/${id}`, body, {
+      headers: this.headers(),
+    });
+  }
+
+  rotateConsumerAppKey(id: string): Observable<MintedKey> {
+    return this.http.post<MintedKey>(`${this.base}/consumer-apps/${id}/rotate-key`, {}, {
+      headers: this.headers(),
+    });
+  }
+
+  deleteConsumerApp(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/consumer-apps/${id}?confirm=true`, {
+      headers: this.headers(),
+    });
   }
 }
