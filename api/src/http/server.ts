@@ -1,5 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { highlightsRouter } from './routes/highlights.js';
+import { agentsRouter } from './routes/agents.js';
+import { consumerAppsRouter } from './routes/consumerApps.js';
 import { authRouter } from './routes/auth.js';
 
 // Dev CORS: allow the Angular dev server (localhost:4200) to call the API
@@ -18,7 +20,7 @@ export function createServer(): express.Express {
     if (origin && allowedOrigins.has(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       res.setHeader('Access-Control-Max-Age', '600');
     }
@@ -35,6 +37,8 @@ export function createServer(): express.Express {
 
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/highlights', highlightsRouter);
+  app.use('/api/v1/agents', agentsRouter);
+  app.use('/api/v1/consumer-apps', consumerAppsRouter);
 
   // Central error handler: log the real error, return a clean 500 (never crash).
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

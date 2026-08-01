@@ -29,10 +29,72 @@ export interface HighlightFilters {
   limit?: number;
 }
 
+// --- AI gateway: the agent registry ----------------------------------------
+
+export interface AgentApp {
+  id: string;
+  name: string;
+}
+
+export interface AgentStats {
+  calls: number;
+  cost_usd: number;
+  ok_rate: number;
+  hard_fails: number;
+}
+
+export interface Agent {
+  id: string;
+  slug: string;
+  name: string;
+  purpose: string | null;
+  prompt: string;
+  model: string;
+  fallback_model: string | null;
+  temperature: number;
+  max_tokens: number;
+  json_output: boolean;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  allowed_apps: AgentApp[];
+  stats: AgentStats;
+}
+
+/** Everything the edit form can change. Sent as a partial on save. */
+export interface AgentWrite {
+  slug?: string;
+  name?: string;
+  purpose?: string | null;
+  prompt?: string;
+  model?: string;
+  fallback_model?: string | null;
+  temperature?: number;
+  max_tokens?: number;
+  json_output?: boolean;
+  enabled?: boolean;
+  allowed_app_ids?: string[];
+}
+
+export interface ConsumerApp {
+  id: string;
+  name: string;
+  active: boolean;
+  created_at: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
+
+  private headers(): HttpHeaders {
+    return new HttpHeaders({ Authorization: `Bearer ${this.auth.token() ?? ''}` });
+  }
+
+  private get base(): string {
+    return environment.apiBaseUrl;
+  }
 
   getHighlights(filters: HighlightFilters = {}): Observable<Highlight[]> {
     let params = new HttpParams();
@@ -41,7 +103,26 @@ export class ApiService {
         params = params.set(key, String(value));
       }
     }
-    const headers = new HttpHeaders({ Authorization: `Bearer ${this.auth.token() ?? ''}` });
-    return this.http.get<Highlight[]>(`${environment.apiBaseUrl}/highlights`, { headers, params });
+    return this.http.get<Highlight[]>(`${this.base}/highlights`, { headers: this.headers(), params });
+  }
+
+  getAgents(): Observable<Agent[]> {
+    return this.http.get<Agent[]>(`${this.base}/agents`, { headers: this.headers() });
+  }
+
+  createAgent(body: AgentWrite): Observable<Agent> {
+    return this.http.post<Agent>(`${this.base}/agents`, body, { headers: this.headers() });
+  }
+
+  updateAgent(id: string, body: AgentWrite): Observable<Agent> {
+    return this.http.patch<Agent>(`${this.base}/agents/${id}`, body, { headers: this.headers() });
+  }
+
+  deleteAgent(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/agents/${id}`, { headers: this.headers() });
+  }
+
+  getConsumerApps(): Observable<ConsumerApp[]> {
+    return this.http.get<ConsumerApp[]>(`${this.base}/consumer-apps`, { headers: this.headers() });
   }
 }

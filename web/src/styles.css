@@ -32,9 +32,24 @@ body {
 .brand .dim { color: var(--muted); font-weight: 400; }
 
 .container { max-width: 860px; margin: 0 auto; padding: 26px 22px; }
+.container.wide { max-width: 1180px; }
+
+.nav { display: flex; gap: 18px; margin-left: auto; margin-right: 20px; }
+.nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+}
+.nav a:hover { color: var(--text); }
+.nav a.active { color: var(--text); border-bottom-color: var(--accent); }
 
 .muted { color: var(--muted); }
 .error { color: var(--loss); }
+.ok { color: var(--win); }
+.warn { color: var(--lesson); font-weight: 600; }
+.small { font-size: 12px; }
 
 .card {
   background: var(--panel);
@@ -103,3 +118,89 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .badge-win { background: var(--win); }
 .badge-loss { background: var(--loss); }
 .badge-lesson { background: var(--lesson); }
+
+/* --- AI Agents screen ---------------------------------------------------- */
+
+.agents-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.screen-title { margin: 0 0 4px; font-size: 20px; }
+.note { margin: 0; font-size: 13px; max-width: 52ch; line-height: 1.45; }
+
+.split { display: grid; grid-template-columns: 360px 1fr; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+
+.agent-card { position: relative; padding: 14px 16px; cursor: pointer; }
+.agent-card:hover { border-color: var(--accent); }
+.agent-card.active { border-color: var(--accent); border-left-width: 4px; }
+.agent-name { font-weight: 600; margin-bottom: 3px; padding-right: 52px; }
+.agent-purpose { font-size: 12.5px; line-height: 1.4; }
+.agent-badges { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.agent-stat { font-size: 11.5px; margin-top: 9px; }
+
+.pill {
+  position: absolute; top: 13px; right: 13px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px;
+  border: 1px solid var(--border); background: #0f131a; color: var(--muted); cursor: pointer;
+}
+.pill-on { background: rgba(47, 191, 113, 0.16); border-color: rgba(47, 191, 113, 0.4); color: var(--win); }
+
+.chip {
+  display: inline-block;
+  font-size: 11.5px; font-weight: 500;
+  background: #0f131a; border: 1px solid var(--border); border-radius: 6px;
+  padding: 2px 9px; color: var(--muted);
+}
+.chip-model { color: var(--accent); border-color: rgba(76, 141, 255, 0.4); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-select { cursor: pointer; font-size: 13px; padding: 7px 12px; color: var(--text); }
+.chip-sel { border-color: var(--accent); background: rgba(76, 141, 255, 0.12); color: var(--accent); }
+
+.editor { display: flex; flex-direction: column; gap: 16px; }
+.editor-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+}
+.editor-title { font-size: 16px; font-weight: 600; }
+.empty { text-align: center; padding: 48px 18px; }
+
+.editor label { font-size: 13px; }
+.editor .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 640px) { .editor .two { grid-template-columns: 1fr; } }
+.editor .stack { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 13px; color: var(--muted); }
+.hint { font-size: 11.5px; }
+textarea {
+  background: #0f131a; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 9px 11px; font-size: 13.5px;
+  font-family: inherit; line-height: 1.5; resize: vertical;
+}
+textarea:focus { outline: none; border-color: var(--accent); }
+input[type="range"] { accent-color: var(--accent); padding: 0; }
+/* Specificity has to beat `.editor .stack`, which sets flex-direction: column. */
+.switch-row,
+.editor .switch-row {
+  flex-direction: row; align-items: center; justify-content: flex-start;
+  gap: 9px; color: var(--text); cursor: pointer;
+}
+.switch-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+
+.costpanel { background: #0f131a; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.costpanel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.costgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+@media (max-width: 640px) { .costgrid { grid-template-columns: repeat(2, 1fr); } }
+.costgrid div { display: flex; flex-direction: column; gap: 2px; }
+.costgrid b { font-size: 18px; }
+.escalate {
+  margin: 14px 0 0; padding: 9px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.45;
+  background: rgba(224, 169, 46, 0.12); border: 1px solid rgba(224, 169, 46, 0.4); color: var(--lesson);
+}
+.escalate.clear { background: rgba(47, 191, 113, 0.1); border-color: rgba(47, 191, 113, 0.35); color: var(--win); }
+.escalate.neutral { background: #171a21; border-color: var(--border); color: var(--muted); }
+
+.editor-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-top: 14px; border-top: 1px solid var(--border);
+}
+.foot-right { display: flex; align-items: center; gap: 12px; }
+.btn.danger { background: transparent; color: var(--loss); border: 1px solid rgba(229, 83, 60, 0.45); }
+.btn.danger:hover { background: rgba(229, 83, 60, 0.12); }
