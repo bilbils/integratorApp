@@ -135,6 +135,7 @@ function blankDraft(): Draft {
               </div>
               <label class="switch-row">
                 <input type="checkbox" name="enabled" [(ngModel)]="d.enabled" />
+                <span class="switch"></span>
                 <span>{{ d.enabled ? 'Enabled' : 'Disabled' }}</span>
               </label>
             </div>
@@ -193,8 +194,9 @@ function blankDraft(): Draft {
               </label>
             </div>
 
-            <label class="switch-row stack">
+            <label class="switch-row">
               <input type="checkbox" name="json" [(ngModel)]="d.json_output" />
+              <span class="switch"></span>
               <span>Return clean JSON — for agents whose result is read by code</span>
             </label>
 

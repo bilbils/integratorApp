@@ -8,7 +8,10 @@ import { AuthService } from './core/auth.service';
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
     <header class="topbar">
-      <span class="brand">Integrator</span>
+      <span class="brand">
+        <img src="brand/staffility-logo-reversed.svg" alt="Staffility" />
+        <span class="app">Integrator Admin</span>
+      </span>
       @if (auth.isLoggedIn()) {
         <nav class="nav">
           <a routerLink="/highlights" routerLinkActive="active">Highlights</a>
