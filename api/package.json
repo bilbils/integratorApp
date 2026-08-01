@@ -1,6 +1,6 @@
 {
   "name": "integrator-app-api",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Integrator App - API + MCP server (v1: AI-highlights vertical)",

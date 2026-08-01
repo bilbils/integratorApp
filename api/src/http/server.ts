@@ -3,6 +3,7 @@ import { highlightsRouter } from './routes/highlights.js';
 import { agentsRouter } from './routes/agents.js';
 import { consumerAppsRouter } from './routes/consumerApps.js';
 import { authRouter } from './routes/auth.js';
+import { VERSION, BUILD_STAMP } from '../version.js';
 
 // Dev CORS: allow the Angular dev server (localhost:4200) to call the API
 // cross-origin. For production, drive the allowed origin(s) from env config.
@@ -33,7 +34,11 @@ export function createServer(): express.Express {
 
   app.use(express.json());
 
-  app.get('/health', (_req, res) => { res.json({ ok: true }); });
+  // Health doubles as the version probe the admin masthead reads, so a UI/API
+  // mismatch after a partial deploy is visible instead of mysterious.
+  app.get('/health', (_req, res) => {
+    res.json({ ok: true, version: VERSION, build: BUILD_STAMP });
+  });
 
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/highlights', highlightsRouter);

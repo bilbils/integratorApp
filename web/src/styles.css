@@ -341,3 +341,15 @@ input[type="range"]::-moz-range-thumb {
   font-size: 12.5px; line-height: 1.5; color: var(--navy); white-space: pre-wrap; word-break: break-word;
 }
 .costpanel textarea { width: 100%; margin-top: 10px; }
+
+/* Build marker in the masthead — quiet when UI and API agree, amber when not. */
+.build {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.03em;
+  color: #7f97ab; white-space: nowrap; cursor: default;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.build-warn { color: var(--yellow); }
+.build-flag {
+  margin-left: 6px; padding: 1px 7px; border-radius: 20px;
+  background: rgba(255, 198, 45, 0.18); border: 1px solid rgba(255, 198, 45, 0.5);
+}
