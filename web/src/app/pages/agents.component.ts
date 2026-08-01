@@ -1,7 +1,14 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
-import { Agent, AgentWrite, ApiService, ConsumerApp } from '../core/api.service';
+import {
+  Agent,
+  AgentWrite,
+  ApiService,
+  ConsumerApp,
+  GatewayModel,
+  InvokeResult,
+} from '../core/api.service';
 
 /**
  * The AI gateway's admin screen: an editable registry of agents.
@@ -9,13 +16,11 @@ import { Agent, AgentWrite, ApiService, ConsumerApp } from '../core/api.service'
  * Every agent is a saved row - name, purpose, prompt, model, knobs, and which
  * apps may call it. Adding a capability is adding a row, not a deploy.
  *
- * The model lists below are illustrative defaults for the picker. The real
- * catalogue comes from whatever gateway sits underneath (LiteLLM / OpenRouter)
- * once that is chosen; a model already saved on an agent is always kept in the
- * list even if it is not one of these.
+ * The model picker is fed live from the gateway (GET /agents/models), sorted
+ * cheapest first, so "cheapest capable" is something you read off the list
+ * rather than guess at - and so it can never drift out of date the way a
+ * hardcoded rate card would.
  */
-const CHEAP_MODELS = ['gpt-4o-mini', 'claude-haiku', 'gemini-flash'];
-const STRONG_MODELS = ['gpt-4o', 'claude-sonnet', 'gemini-pro'];
 
 /** More than this many hard failures in 30 days is evidence, not noise. */
 const ESCALATE_AT = 3;
@@ -56,8 +61,8 @@ function blankDraft(): Draft {
     name: 'New agent',
     purpose: '',
     prompt: '',
-    model: CHEAP_MODELS[0],
-    fallback_model: STRONG_MODELS[0],
+    model: '',
+    fallback_model: '',
     temperature: 0.3,
     max_tokens: 400,
     json_output: false,
@@ -160,28 +165,36 @@ function blankDraft(): Draft {
             <div class="two">
               <label>
                 Default model — cheapest that can do the job
-                <select name="model" [(ngModel)]="d.model">
-                  <optgroup label="Cheapest tier">
-                    @for (m of cheapModels(); track m) { <option [value]="m">{{ m }}</option> }
-                  </optgroup>
-                  <optgroup label="Stronger tier">
-                    @for (m of strongModels(); track m) { <option [value]="m">{{ m }}</option> }
-                  </optgroup>
-                </select>
+                @if (models().length) {
+                  <select name="model" [(ngModel)]="d.model">
+                    @for (m of modelOptions(d.model); track m.id) {
+                      <option [value]="m.id">{{ label(m) }}</option>
+                    }
+                  </select>
+                } @else {
+                  <input type="text" name="model" [(ngModel)]="d.model" placeholder="provider/model" />
+                }
               </label>
               <label>
                 Fallback model — escalate on evidence
-                <select name="fallback" [(ngModel)]="d.fallback_model">
-                  <option value="">None</option>
-                  <optgroup label="Cheapest tier">
-                    @for (m of cheapModels(); track m) { <option [value]="m">{{ m }}</option> }
-                  </optgroup>
-                  <optgroup label="Stronger tier">
-                    @for (m of strongModels(); track m) { <option [value]="m">{{ m }}</option> }
-                  </optgroup>
-                </select>
+                @if (models().length) {
+                  <select name="fallback" [(ngModel)]="d.fallback_model">
+                    <option value="">None</option>
+                    @for (m of modelOptions(d.fallback_model); track m.id) {
+                      <option [value]="m.id">{{ label(m) }}</option>
+                    }
+                  </select>
+                } @else {
+                  <input type="text" name="fallback" [(ngModel)]="d.fallback_model" placeholder="none" />
+                }
               </label>
             </div>
+            @if (!models().length) {
+              <span class="hint muted">
+                Model list is unavailable — the gateway needs OPENROUTER_API_KEY set.
+                Type a model id by hand for now.
+              </span>
+            }
 
             <div class="two">
               <label>
@@ -239,6 +252,35 @@ function blankDraft(): Draft {
               </div>
             }
 
+            @if (d.id && d.enabled) {
+              <div class="costpanel">
+                <div class="costpanel-title muted">Try it</div>
+                <textarea
+                  rows="3"
+                  name="tryinput"
+                  placeholder="Paste something for this agent to work on…"
+                  [(ngModel)]="tryInput"
+                ></textarea>
+                <div class="tryrow">
+                  <button class="btn ghost" (click)="run(d)" [disabled]="running() || !tryInput.trim()">
+                    {{ running() ? 'Running…' : 'Run agent' }}
+                  </button>
+                  <span class="muted small">Saved config runs — save your edits first.</span>
+                </div>
+                @if (runError()) { <p class="error small">{{ runError() }}</p> }
+                @if (runResult(); as r) {
+                  <pre class="tryout">{{ r.output }}</pre>
+                  <div class="agent-stat muted">
+                    {{ r.model }}
+                    @if (r.used_fallback) { · <span class="warn">escalated to fallback</span> }
+                    · {{ r.prompt_tokens }}+{{ r.completion_tokens }} tokens
+                    · {{ r.cost | number: '1.6-6' }} credits
+                    · {{ r.latency_ms }}ms
+                  </div>
+                }
+              </div>
+            }
+
             <div class="editor-foot">
               @if (d.id) {
                 <button class="btn danger" (click)="remove()" [disabled]="busy()">
@@ -276,6 +318,36 @@ export class AgentsComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly confirmingDelete = signal(false);
 
+  // "Try it" panel state.
+  tryInput = '';
+  readonly running = signal(false);
+  readonly runResult = signal<InvokeResult | null>(null);
+  readonly runError = signal<string | null>(null);
+
+  /** Runs the SAVED agent, not the draft — the point is to test what's live. */
+  run(d: Draft): void {
+    if (!d.id) return;
+    this.running.set(true);
+    this.runError.set(null);
+    this.runResult.set(null);
+    this.api.invokeAgent(d.id, this.tryInput).subscribe({
+      next: (r) => {
+        this.runResult.set(r);
+        this.running.set(false);
+        this.load(d.id ?? undefined);   // refresh the cost panel with this run
+      },
+      error: (err: { status?: number; error?: { error?: string } }) => {
+        this.running.set(false);
+        this.runError.set(
+          err?.error?.error ??
+            (err?.status === 503
+              ? 'The gateway is not configured or is unreachable.'
+              : 'That run failed.'),
+        );
+      },
+    });
+  }
+
   /** Stats belong to the saved agent, not the draft - a new agent has none. */
   readonly selectedStats = computed(() => {
     const id = this.draft()?.id;
@@ -283,22 +355,33 @@ export class AgentsComponent implements OnInit {
     return this.agents().find((a) => a.id === id)?.stats ?? null;
   });
 
-  /** Keep any model already saved on an agent selectable, even if it's off-list. */
-  readonly cheapModels = computed(() => this.withSaved(CHEAP_MODELS));
-  readonly strongModels = computed(() => STRONG_MODELS);
+  /**
+   * The catalogue comes from the gateway, cheapest first, so "cheapest capable"
+   * is something you can read off the list instead of guess at.
+   */
+  readonly models = signal<GatewayModel[]>([]);
 
-  private withSaved(list: string[]): string[] {
-    const known = new Set([...CHEAP_MODELS, ...STRONG_MODELS]);
-    const extras = new Set<string>();
-    for (const a of this.agents()) {
-      if (!known.has(a.model)) extras.add(a.model);
-      if (a.fallback_model && !known.has(a.fallback_model)) extras.add(a.fallback_model);
-    }
-    return [...list, ...extras];
+  /** Never drop the model an agent is already on, even if it left the catalogue. */
+  modelOptions(current: string): GatewayModel[] {
+    const list = this.models();
+    if (!current || list.some((m) => m.id === current)) return list;
+    return [
+      { id: current, name: `${current} (not in catalogue)`, prompt_per_m: null, completion_per_m: null, context_length: null },
+      ...list,
+    ];
+  }
+
+  label(m: GatewayModel): string {
+    if (m.prompt_per_m === null) return m.name;
+    return `${m.name} — $${m.prompt_per_m.toFixed(2)}/M in, $${(m.completion_per_m ?? 0).toFixed(2)}/M out`;
   }
 
   ngOnInit(): void {
     this.load();
+    this.api.getModels().subscribe({
+      next: (rows) => this.models.set(rows),
+      error: () => this.models.set([]),
+    });
     // Only live apps belong in an access picker.
     this.api.getConsumerApps(false).subscribe({
       next: (rows) => this.apps.set(rows),

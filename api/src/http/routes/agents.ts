@@ -15,9 +15,16 @@ import {
   BadRequest,
   type Viewer,
 } from '../../services/agents.js';
+import {
+  invokeAgent,
+  listModels,
+  GatewayNotConfigured,
+  GatewayError,
+} from '../../services/gateway.js';
 import { requireAdmin, requireReader, bearer } from '../middleware.js';
 import { checkIngestToken } from '../../services/auth.js';
 import { wrap } from '../async.js';
+import { z } from 'zod';
 
 export const agentsRouter = Router();
 
@@ -57,6 +64,17 @@ agentsRouter.get(
   wrap(async (req, res) => {
     const days = Number(req.query.days ?? 30);
     res.json(await spendByApp(Number.isFinite(days) ? days : 30));
+  }),
+);
+
+// The live model catalogue from the gateway, for the model picker.
+// Empty array when the gateway isn't configured - the screen degrades to a
+// plain text field rather than breaking.
+agentsRouter.get(
+  '/models',
+  requireAdmin,
+  wrap(async (_req, res) => {
+    res.json(await listModels());
   }),
 );
 
@@ -137,6 +155,60 @@ agentsRouter.delete(
       return;
     }
     res.status(204).end();
+  }),
+);
+
+// --- Invoke ----------------------------------------------------------------
+
+const InvokeBody = z.object({
+  input: z.string().min(1).max(200_000),
+});
+
+/**
+ * Run an agent. This is the gateway's whole point: one door, and the caller
+ * never picks a model or holds a provider key.
+ *
+ * Reader auth, then the same scoping as every other read - `getAgent` with the
+ * caller's viewer returns null unless the agent is enabled AND granted to that
+ * consumer app, so a consumer cannot invoke something it can't see. Every
+ * attempt, including failures, lands in the cost/outcome log.
+ */
+agentsRouter.post(
+  '/:idOrSlug/invoke',
+  wrap(requireReader),
+  wrap(async (req, res) => {
+    const parsed = InvokeBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+
+    const viewer = viewerFor(req);
+    const agent = await getAgent(req.params.idOrSlug, viewer);
+    if (!agent) {
+      res.status(404).json({ error: 'not found' });
+      return;
+    }
+    // Admins can see disabled agents; nobody gets to run one.
+    if (!agent.enabled) {
+      res.status(409).json({ error: 'that agent is switched off' });
+      return;
+    }
+
+    const consumerAppId = viewer.kind === 'consumer' ? viewer.consumerAppId : null;
+    try {
+      res.json(await invokeAgent(agent, parsed.data.input, consumerAppId));
+    } catch (err) {
+      if (err instanceof GatewayNotConfigured) {
+        res.status(503).json({ error: err.message });
+        return;
+      }
+      if (err instanceof GatewayError) {
+        res.status(err.status).json({ error: err.message });
+        return;
+      }
+      throw err;
+    }
   }),
 );
 

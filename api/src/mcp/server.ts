@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { createHighlight, listHighlights } from '../services/highlights.js';
 import { listAgents, getAgent, recordRun } from '../services/agents.js';
+import { invokeAgent } from '../services/gateway.js';
 import { checkIngestToken } from '../services/auth.js';
 
 const server = new McpServer({ name: 'integrator-app', version: '0.1.0' });
@@ -100,6 +101,39 @@ server.registerTool(
       return { content: [{ type: 'text', text: `No agent found for "${id_or_slug}".` }], isError: true };
     }
     return { content: [{ type: 'text', text: JSON.stringify(agent, null, 2) }] };
+  },
+);
+
+// Run: the gateway does the work. The caller names a job, not a model - the
+// registry decides which model runs it, escalates if the cheap one can't cope,
+// and logs what it cost.
+server.registerTool(
+  'run_ai_agent',
+  {
+    title: 'Run AI agent',
+    description:
+      'Run one of the gateway\'s registered agents on some input. You do not pick ' +
+      'a model - the agent\'s saved config does, starting with the cheapest capable ' +
+      'one and escalating to its fallback only if that is not good enough.',
+    inputSchema: {
+      id_or_slug: z.string().describe("The agent's slug (e.g. 'summarizer') or its uuid."),
+      input: z.string().describe('The text for the agent to work on.'),
+    },
+  },
+  async ({ id_or_slug, input }) => {
+    const agent = await getAgent(id_or_slug, { kind: 'admin' });
+    if (!agent) {
+      return { content: [{ type: 'text', text: `No agent found for "${id_or_slug}".` }], isError: true };
+    }
+    if (!agent.enabled) {
+      return { content: [{ type: 'text', text: `Agent "${agent.name}" is switched off.` }], isError: true };
+    }
+    try {
+      const result = await invokeAgent(agent, input, null);
+      return { content: [{ type: 'text', text: result.output }] };
+    } catch (err) {
+      return { content: [{ type: 'text', text: `Agent run failed: ${(err as Error).message}` }], isError: true };
+    }
   },
 );
 

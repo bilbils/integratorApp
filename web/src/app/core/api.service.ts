@@ -76,6 +76,26 @@ export interface AgentWrite {
   allowed_app_ids?: string[];
 }
 
+/** A model as the gateway currently advertises it. Prices are USD per million tokens. */
+export interface GatewayModel {
+  id: string;
+  name: string;
+  prompt_per_m: number | null;
+  completion_per_m: number | null;
+  context_length: number | null;
+}
+
+export interface InvokeResult {
+  output: string;
+  data?: unknown;
+  model: string;
+  used_fallback: boolean;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  cost: number;
+  latency_ms: number;
+}
+
 // --- Consumer apps & connector access ---------------------------------------
 
 export type Permission = 'read' | 'sync';
@@ -154,6 +174,19 @@ export class ApiService {
 
   deleteAgent(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/agents/${id}`, { headers: this.headers() });
+  }
+
+  /** Live catalogue from the gateway. Empty when the gateway isn't configured. */
+  getModels(): Observable<GatewayModel[]> {
+    return this.http.get<GatewayModel[]>(`${this.base}/agents/models`, { headers: this.headers() });
+  }
+
+  invokeAgent(idOrSlug: string, input: string): Observable<InvokeResult> {
+    return this.http.post<InvokeResult>(
+      `${this.base}/agents/${idOrSlug}/invoke`,
+      { input },
+      { headers: this.headers() },
+    );
   }
 
   getConsumerApps(includeInactive = true): Observable<ConsumerApp[]> {
