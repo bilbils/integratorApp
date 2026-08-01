@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Agents — Staffility Integrator (Mockup)</title>
+<title>AI Agents — Staffility Integrator (design reference)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
   .logo svg{height:26px;width:auto;display:block;}
   .mast h1{font-size:17px;font-weight:700;letter-spacing:.03em;margin:0;color:#fff;}
   .mast .sub{font-size:12px;color:var(--mist);margin-top:2px;}
-  .mockpill{background:rgba(255,198,45,.18);border:1px solid var(--yellow);color:#ffd873;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:20px;}
+  .mockpill{text-decoration:none;display:inline-block;background:rgba(255,198,45,.18);border:1px solid var(--yellow);color:#ffd873;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:20px;}
 
   /* Toolbar */
   .toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 26px 6px;flex-wrap:wrap;}
@@ -207,7 +207,7 @@
       <div class="sub">Connectors, agents, and access — one place you own and control</div>
     </div>
   </div>
-  <span class="mockpill">Mockup for review</span>
+  <a class="mockpill" href="/" title="Open the real admin">Design reference · the real admin is now built →</a>
 </header>
 
 <nav class="tabs">
@@ -312,7 +312,7 @@
 </div>
 
 <div class="footer">
-  <b>How to read this:</b> This is a clickable mockup, not the real app — edits live only in this page. It shows the shape of the AI-Agents registry we agreed on: cheapest-capable model by default, an optional stronger fallback per agent, per-app access, and a cost/outcome panel so you escalate a model <i>on evidence</i>, not by guessing. Model names shown are illustrative — the real list comes from whatever gateway sits underneath (LiteLLM / OpenRouter), and a model can be hosted today or Staffility-hosted later by changing one field.
+  <b>How to read this:</b> This page is the <b>design reference</b> we drew before building — a clickable sketch whose edits live only in this page. <b>The real admin now exists</b> and is served at the root of this site: <a href="/" style="color:#0079a3;font-weight:600">open it here</a>. In the real one the AI Agents registry and Apps &amp; Access screens are working software backed by Postgres, the model list is pulled live from the gateway (OpenRouter) with real prices rather than the illustrative names shown here, and agents actually run. What is still only sketched below is the <b>Aggregators</b> screen. Kept online because it is the clearest picture of the whole shape in one page.
 </div>
 
 <script>

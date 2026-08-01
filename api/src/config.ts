@@ -27,4 +27,14 @@ export const config = {
 
   /** Hard ceiling on one model call, so a hung provider can't hold a request open. */
   gatewayTimeoutMs: Number(process.env.GATEWAY_TIMEOUT_MS ?? 60_000),
+
+  /**
+   * Browser origins allowed to call this API. Defaults to the local Angular dev
+   * server. When the admin gets hosted, add its origin here rather than editing
+   * code - or proxy /api through the same origin and skip CORS entirely.
+   */
+  corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:4200,http://127.0.0.1:4200')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
 };

@@ -47,8 +47,17 @@ export class LoginComponent {
     this.error.set(null);
     this.auth.login(this.email, this.password).subscribe({
       next: () => this.router.navigate(['/highlights']),
-      error: () => {
-        this.error.set('Invalid email or password.');
+      error: (err: { status?: number }) => {
+        // A 401 really is a bad password. Anything else means we never got to
+        // ask - saying "invalid password" then would send you hunting for the
+        // wrong problem, which is exactly what the deployed UI does today while
+        // its API is still local-only.
+        this.error.set(
+          err?.status === 401
+            ? 'Invalid email or password.'
+            : 'Can’t reach the API. It isn’t running, or isn’t reachable from here — ' +
+              'check the build marker at the top of the page.',
+        );
         this.loading.set(false);
       },
     });

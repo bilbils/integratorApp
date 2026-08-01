@@ -1,0 +1,5 @@
+{
+  "error": "No API is deployed for this site yet.",
+  "detail": "The Integrator admin UI is hosted here, but its API and database still run locally only. Start the API with `npm run dev` in api/ and use http://localhost:4200 until the API is hosted.",
+  "docs": "https://github.com/bilbils/integratorApp"
+}

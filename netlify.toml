@@ -1,0 +1,37 @@
+# Netlify build for the Integrator admin.
+#
+# The site used to publish `mockups/` — the design sketch — which meant the URL
+# looked like the product but wasn't. It now builds and publishes the REAL
+# Angular admin, with the sketch preserved at /mockup for reference.
+#
+# Honest caveat while the API is still local-only: the deployed UI cannot reach
+# an API, so its masthead shows "API unreachable" in amber and sign-in fails with
+# a message saying so. That is deliberate — it tells the truth about the state of
+# the deploy instead of pretending.
+
+[build]
+  # `npm ci` needs the lockfile that sits next to web/package.json.
+  command = """
+    npm --prefix web ci --no-audit --no-fund && \
+    npm --prefix web run build && \
+    mkdir -p web/dist/web/browser/mockup && \
+    cp mockups/index.html web/dist/web/browser/mockup/index.html
+  """
+  publish = "web/dist/web/browser"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# API calls must NOT fall through to the SPA catch-all below - a 200 with an
+# HTML body is a confusing way to say "there is no API here". Answer honestly.
+[[redirects]]
+  from = "/api/*"
+  to = "/api-unconfigured.json"
+  status = 503
+  force = true
+
+# Angular routes are client-side; every other path serves the app shell.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

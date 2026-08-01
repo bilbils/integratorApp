@@ -4,13 +4,12 @@ import { agentsRouter } from './routes/agents.js';
 import { consumerAppsRouter } from './routes/consumerApps.js';
 import { authRouter } from './routes/auth.js';
 import { VERSION, BUILD_STAMP } from '../version.js';
+import { config } from '../config.js';
 
-// Dev CORS: allow the Angular dev server (localhost:4200) to call the API
-// cross-origin. For production, drive the allowed origin(s) from env config.
-const allowedOrigins = new Set<string>([
-  'http://localhost:4200',
-  'http://127.0.0.1:4200',
-]);
+// Allowed browser origins come from config (CORS_ORIGINS), defaulting to the
+// local Angular dev server. Adding a hosted admin is an env change, not a code
+// change - and if the admin is proxied onto the same origin, none of this runs.
+const allowedOrigins = new Set<string>(config.corsOrigins);
 
 export function createServer(): express.Express {
   const app = express();
