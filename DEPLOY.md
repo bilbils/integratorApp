@@ -5,7 +5,7 @@ Two hosts, one repo, both auto-deploying from `main`:
 | Piece | Host | Config | URL |
 |---|---|---|---|
 | Angular admin | Netlify (`staffility-integrator-mockup`) | `netlify.toml` | https://staffility-integrator-mockup.netlify.app |
-| API + gateway | Render (`integrator-api`) | `render.yaml` | https://integrator-api.onrender.com |
+| API + gateway | Render (`integrator-api`) | `render.yaml` | https://integrator-api-koyz.onrender.com |
 
 The admin does **not** call the API cross-origin. Netlify proxies `/api/*` and
 `/health` through to Render, so the browser only ever sees one hostname and CORS
@@ -86,7 +86,7 @@ temporary — it replaces the old deliberate 503.
 Render assigns the URL. If `integrator-api` was already taken globally it will
 have picked something else.
 
-If the assigned URL is **not** `https://integrator-api.onrender.com`, edit the
+If the assigned URL is **not** `https://integrator-api-koyz.onrender.com`, edit the
 **two** `to =` lines in `netlify.toml` to match and push again. They are flagged
 with a banner comment; there are exactly two.
 
@@ -109,7 +109,7 @@ Do all four. The first two can pass while the app is still broken.
 **1 · The API answers directly**
 
 ```bash
-curl -s https://integrator-api.onrender.com/health
+curl -s https://integrator-api-koyz.onrender.com/health
 ```
 
 Expect `{"ok":true,"version":"0.3.0","build":"0808-1816"}`.

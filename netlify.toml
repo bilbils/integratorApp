@@ -44,7 +44,7 @@
 # interactive testing from the admin UI.
 [[redirects]]
   from = "/api/*"
-  to = "https://integrator-api.onrender.com/api/:splat"
+  to = "https://integrator-api-koyz.onrender.com/api/:splat"
   status = 200
   force = true
 
@@ -54,7 +54,7 @@
 # as JSON, and reports "API unreachable" while the API is perfectly healthy.
 [[redirects]]
   from = "/health"
-  to = "https://integrator-api.onrender.com/health"
+  to = "https://integrator-api-koyz.onrender.com/health"
   status = 200
   force = true
 
