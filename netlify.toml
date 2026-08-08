@@ -4,10 +4,12 @@
 # looked like the product but wasn't. It now builds and publishes the REAL
 # Angular admin, with the sketch preserved at /mockup for reference.
 #
-# Honest caveat while the API is still local-only: the deployed UI cannot reach
-# an API, so its masthead shows "API unreachable" in amber and sign-in fails with
-# a message saying so. That is deliberate — it tells the truth about the state of
-# the deploy instead of pretending.
+# As of build 0808-1816 the API is hosted on Render and PROXIED through this
+# site rather than called cross-origin. That is deliberate: the browser only
+# ever talks to one hostname, so CORS never runs, preflights never happen, and
+# `environment.production.ts` can keep saying `/api/v1` forever. Moving the API
+# later (Render -> Azure) is a two-line change in this file, not an Angular
+# rebuild and redeploy.
 
 [build]
   # `npm ci` needs the lockfile that sits next to web/package.json.
@@ -22,12 +24,38 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# API calls must NOT fall through to the SPA catch-all below - a 200 with an
-# HTML body is a confusing way to say "there is no API here". Answer honestly.
+# ---------------------------------------------------------------------------
+# THE API ORIGIN APPEARS IN EXACTLY TWO PLACES BELOW — change both together.
+# Netlify does not interpolate environment variables into redirects, so the
+# hostname has to be a literal. Confirm it against the URL Render actually
+# assigns the service; if `integrator-api` was taken, Render will have picked
+# something else and both lines need to match it.
+# ---------------------------------------------------------------------------
+
+# status = 200 makes this a PROXY, not a redirect: Netlify fetches the API
+# server-side and returns the body under this origin. The browser never learns
+# the API's real hostname, so this is same-origin and CORS is bypassed
+# entirely. Authorization headers are forwarded.
+#
+# Known ceiling: Netlify proxy responses time out around 30s. The API's own
+# GATEWAY_TIMEOUT_MS is 60s, so an unusually slow agent invoke started from the
+# admin screen could be cut off here. Server-to-server callers (Master-Plan's
+# edge function) hit Render directly and get the full 60s — this only affects
+# interactive testing from the admin UI.
 [[redirects]]
   from = "/api/*"
-  to = "/api-unconfigured.json"
-  status = 503
+  to = "https://integrator-api.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# The masthead probes /health at the SITE ROOT — app.component.ts strips the
+# /api/v1 suffix off apiBaseUrl before fetching. Without this rule that request
+# falls through to the SPA catch-all below, gets index.html back, fails to parse
+# as JSON, and reports "API unreachable" while the API is perfectly healthy.
+[[redirects]]
+  from = "/health"
+  to = "https://integrator-api.onrender.com/health"
+  status = 200
   force = true
 
 # Angular routes are client-side; every other path serves the app shell.

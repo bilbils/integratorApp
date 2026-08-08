@@ -1,0 +1,67 @@
+# Render Blueprint for the Integrator API.
+#
+# Why this file exists rather than clicking through the dashboard: the service
+# definition is a schema change by another name. If it only lives in Render's UI
+# it doesn't exist — same rule as migrations living in the repo.
+#
+# First-time setup: Render Dashboard -> New -> Blueprint -> pick this repo.
+# Render reads this file, creates the service, and prompts for the four secrets
+# marked `sync: false`. Everything else is set from here.
+#
+# The four secrets are NEVER in this file, never in api/.env, never in git.
+# They are typed once into Render's env store, which is write-only in the UI.
+
+services:
+  - type: web
+    name: integrator-api
+    runtime: node
+    plan: starter # $7/mo. NOT free — free spins down after ~15min idle with a
+      # ~50s cold start, which makes the admin masthead's /health
+      # probe look broken every single time you open the app.
+    region: virginia # Supabase project Integrator-App (qlckjrkvmtdhfypsxpqv) is
+      # us-east-1. Same coast = one short hop per query.
+    rootDir: api
+    # `--include=dev` is not optional: Render sets NODE_ENV=production for Node
+    # services, which makes a bare `npm ci` skip devDependencies — and typescript
+    # is a devDependency, so `npm run build` would fail with "tsc: not found".
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    # Render polls this and will not route traffic to a deploy that never answers
+    # 200 here. /health is public and returns {ok, version, build}.
+    healthCheckPath: /health
+    autoDeploy: true # push to main -> deploy, matching the Netlify half.
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+
+      # --- secrets: prompted on first deploy, stored in Render, never in git ---
+      - key: DATABASE_URL
+        sync: false # Supabase pooler URL. If the password has special chars,
+        # URL-encode it or the connection string silently breaks.
+      - key: JWT_SECRET
+        sync: false # admin session signing
+      - key: INGEST_TOKEN
+        sync: false # machine auth for highlight pushes
+      - key: OPENROUTER_API_KEY
+        sync: false # the AI gateway's engine
+
+      # --- non-secret config: source of truth is this file ---
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: GATEWAY_TIMEOUT_MS
+        value: "60000"
+      - key: APP_URL
+        value: https://staffility-integrator-mockup.netlify.app
+      - key: APP_TITLE
+        value: Staffility Integrator
+
+      # Belt and braces. The admin reaches the API through a Netlify same-origin
+      # proxy (see netlify.toml), so CORS normally never runs. This list keeps
+      # direct browser access working too — for debugging, or if the proxy's
+      # ~30s ceiling ever gets in the way of a long agent invoke.
+      - key: CORS_ORIGINS
+        value: https://staffility-integrator-mockup.netlify.app,http://localhost:4200,http://127.0.0.1:4200
+
+    # PORT is injected by Render and read by config.ts (`process.env.PORT ?? 3000`).
+    # Do not set it here.
