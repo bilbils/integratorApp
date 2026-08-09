@@ -47,12 +47,24 @@ services:
         value: "22"
 
       # --- secrets: prompted on first deploy, stored in Render, never in git ---
-
-      # Supabase SESSION pooler URL (port 5432, user postgres.<project-ref>).
-      # NOT the direct db.<ref>.supabase.co string - that is IPv6-only and
-      # Render's outbound is IPv4. URL-encode any special characters.
-      - key: DATABASE_URL
-        sync: false
+      #
+      # DATABASE_URL IS DELIBERATELY NOT DECLARED HERE.
+      #
+      # It is set ONLY in the Render dashboard (Environment tab). Declaring it in
+      # this file - even with `sync: false` - made the value captured at blueprint
+      # creation authoritative, and every later push to main re-synced the
+      # blueprint and silently reverted dashboard edits. The symptom was maddening:
+      # the dashboard showed the new value while the running process kept getting
+      # the old one, so `/health` passed and only the first query failed.
+      #
+      # Required value (see DEPLOY.md): the Supabase SESSION pooler URL -
+      #   postgresql://postgres.<project-ref>:<pw>@aws-0-us-east-1.pooler.supabase.com:5432/postgres
+      # NOT the direct db.<ref>.supabase.co string: that is IPv6-only and Render's
+      # outbound is IPv4, which fails as ENETUNREACH. Not port 6543 either - that
+      # is transaction mode, wrong for a long-lived pg.Pool.
+      #
+      # If a fresh blueprint deploy ever boots without it, config.ts throws
+      # `Missing required env var: DATABASE_URL` - loudly, which is correct.
 
       # admin session signing
       - key: JWT_SECRET
