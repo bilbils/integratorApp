@@ -1,5 +1,107 @@
 # CLAUDE.md — Integrator App
 
+## § NEVER
+
+Rules whose violation is expensive, public, irreversible or regulatory. Not a list of everything that
+would be wrong — see § Landmines for that. Append the moment you find one, in the same breath, before
+the next action. Each rule carries WHY, and the date and method it was found by, because a NEVER with
+no reason attached gets deleted by a future session that cannot see the reason. **Do not weaken or
+remove one on your own inference — flag it for Bill instead.**
+
+1. **NEVER treat a response from the `netlify.app` origin as evidence about the API, auth, the
+   database, or a deploy.** The site has visitor-access password protection on for production *and*
+   previews, which answers with its own HTML form and a **401** before the proxy rule ever runs. A
+   total block and a successful-chain-with-bad-credentials return the identical status code, so any
+   check whose success criterion is 401 **cannot fail**. Verify against
+   `integrator-api-koyz.onrender.com` directly.
+   *Why:* the 08-08 verification table celebrated `…netlify.app/api/v1/agents` → 401 as "the full
+   chain in one number." It was the gate — the request never reached Express. The same check was
+   re-run on 08-17 to the same wrong conclusion and cost about an hour, with Bill typing his admin
+   password into Netlify's site-password box and reading "wrong password" as app auth. `/health`
+   *does* pass the gate and return real JSON, which is why the masthead stayed green for nine days:
+   one path passed, and only that one was ever checked.
+   *Found:* 2026-08-17, by sending one identical request to both targets — Render returned a JWT,
+   Netlify returned 401. Gate re-confirmed still ON that day from Netlify's API
+   (`requiresPassword: true`, scope `all`).
+
+2. **NEVER declare `DATABASE_URL` in `render.yaml`.** Dashboard only. Declaring it there — even with
+   `sync: false` — makes the blueprint authoritative, and every later push to `main` silently reverts
+   dashboard edits. The symptom is near-undiagnosable: the dashboard shows the new value while the
+   running process keeps the old one, so `/health` passes and only the first query fails.
+   The value must be the Supabase **session** pooler (port 5432) — **not** the direct
+   `db.<ref>.supabase.co` host, which is IPv6-only against Render's IPv4 outbound and fails as
+   `ENETUNREACH` looking like a firewall problem, and **not** 6543, which is transaction mode and
+   wrong for a long-lived `pg.Pool`. As of 2026-08-08 the direct host no longer resolves at all, so
+   the pooler is mandatory rather than merely preferred. A password with special characters must be
+   URL-encoded; the reliable move is to reset it to something alphanumeric.
+   *Found:* 2026-08-08, during the initial Render deploy.
+
+3. **NEVER run `npm run seed` against a database anyone is using.** It rotates the consumer app's API
+   key **unconditionally, on every run**, so a re-seed always invalidates the key in every caller's
+   hand — and it takes the admin password from the environment, so a placeholder left inside a
+   copy-pasteable command becomes the real password.
+   *Found:* 2026-08-17 — both happened, in that order. The first seed set the admin password to the
+   literal string `<pick an admin password>`; the re-seed that fixed it rotated the consumer key a
+   second time.
+
+4. **NEVER add a non-idempotent `.sql` to `api/src/db/`.** `migrate.ts` re-runs **every** file in
+   that folder, in filename order, on every invocation — there is no ledger table. One
+   non-idempotent file breaks `npm run migrate` for everyone, permanently. Use `if not exists`,
+   `on conflict do nothing`, `create or replace`, and test from an empty database.
+
+5. **NEVER create a public table without RLS on and no policies.** That exact combination closes the
+   PostgREST/anon door completely, and the API is unaffected because its pooled Postgres role
+   bypasses RLS. It is the only thing standing between the anon key and every row. Migration `002`
+   set the shape — match it, and let the STATE PROBE confirm coverage rather than assuming. (EGRESS)
+
+6. **NEVER push or deploy on your own initiative, and never let a secret reach the repo.** Push to
+   `main` **is** the deploy, to two hosts at once. Commit to a branch and stop; Bill reviews and
+   pushes in GitHub Desktop. And never paste a live secret into chat, a document, or a commit — and
+   never "redact" one, because a redaction that matches the label instead of the value reads as proof
+   it worked. Select a boolean or a length instead. The fix for a disclosure is **rotation**, not
+   deletion. Render's env store is write-only, so keep your own copy of anything minted there,
+   somewhere that is not this repo. Before any push, ask: if this repo went public tomorrow, what
+   would have to be rotated? The only correct answer is nothing.
+   *Found:* 2026-08-08 — a live DB password was pasted into chat and had to be rotated (it needed
+   resetting anyway). 2026-07-22 — a `.env` reached version control; all three secrets were rotated
+   and `.env*` gitignored.
+
+7. **NEVER route IPTA client-adjacent content through an agent** until residency is decided and
+   written down. Every invoke leaves this system for OpenRouter, a third party. For LFODIE's own
+   content that is a cost question; for client content it is a data-residency and possibly a
+   contractual one, and the DFARS scanner exists precisely because those obligations are real here.
+   Render is also **not** FedRAMP / Azure Gov capable, so a real CMMC path is a separate deployment,
+   not a migration. (EGRESS / REGULATORY)
+
+8. **NEVER run `git` through `device_bash`.** It leaves a `.git/index.lock` that cannot be deleted
+   from that side and blocks Bill's next push. Cowork may read and write files in the clone; git is
+   Bill's, in GitHub Desktop.
+
+9. **NEVER read `ai_agent_runs.cost_usd` as literal dollars.** OpenRouter returns account **credits**.
+   Confirm the credit-to-USD rate before quoting spend. (COST — Render Starter at $7/mo is the other
+   live cost here.)
+
+## § CARD
+
+| slot | value |
+|---|---|
+| **PROJECT** | Integrator App — the single controlled doorway between LFODIE's apps (Bills-Master-Plan, Staffility, IPTA, Blue Orbit) and the outside services they need. A **control plane**, not a database. |
+| **REPO** | `https://github.com/bilbils/integratorApp` (**public**) · clone at **`C:\dev\project\integratorApp`**. Moved out of OneDrive 2026-08-16, because OneDrive sync and `.git` fight each other. `Documents\GitHub\integratorApp` **does not exist**, and `Documents\GitHub\Archive\integratorApp` is stale — never read either, and never fall back to them. |
+| **LIVE SITE** | `https://staffility-integrator-mockup.netlify.app` — Netlify project `staffility-integrator-mockup`, site id `b17fc0bb-9ef8-4e72-905e-143a7cba8639`. Serves the real Angular admin; the original design sketch is at `/mockup`. **Visitor-access password protection is ON for all deploys — see § NEVER #1.** The name still says "mockup"; rename it in Netlify when convenient. |
+| **BACKEND** | `https://integrator-api-koyz.onrender.com` — Render web service `integrator-api`, plan `starter`, region `virginia`, health at `/health`. The `-koyz` is Render's, not a typo: the plain name was taken globally. **This is the authoritative target for every API check.** |
+| **ENVIRONMENT** | **One environment, and it is a hybrid — say so rather than calling it either.** The hosts are production-facing (public URLs, Bill signs in, Master-Plan is being pointed at it) while the data store is the *dev* Supabase project `Integrator-App` (`qlckjrkvmtdhfypsxpqv`, us-east-1). There is no staging, no second database, no separate production credentials. A destructive mistake here has no upstream copy to restore from. |
+| **PROJECT DIR** | `C:\Users\WilliamWilliams\OneDrive - lfodie.com\Documents\Claude\Projects\Integrator App` — planning and context, with `context\`, `drafts\`, `outputs\`. It holds a **second, much larger `CLAUDE.md`**: current state, decisions, changelog. Different document, different job. This file is the repo's rules; that one is the project's state. |
+| **STATE PROBE** | **`npm --prefix api run probe`** → `api/src/ops/probe.ts`. Returns branch / HEAD / dirty / unpushed, the three build-stamp literals and whether they agree, live `/health` from Render, whether Netlify's visitor gate is answering, every row count in the database, RLS coverage, and the migration file list. Run it before quoting any number, and read its own caveats — it refuses to print a verdict it cannot observe. |
+| **BACKLOG** | **`public.tasks` in the Bills-Master-Plan Supabase project (`acwnpnrjlzhkvqmvotvn`)** — the native backlog that already exists. Do not stand up a second one. Integrator rows: `where title ilike '%integrator%' or ctx ilike '%integrator%'`. Columns that matter: `status`, `priority`, `due`, `world`, `origin`, `needs_decision`. Never write an id into a document before the insert returns it. |
+| **DECISION INDEX** | Cowork **project memory** `MEMORY.md` for the "Integrator App" project — one line per decision, pointing at the dated deep-dives in `<PROJECT DIR>\drafts\*_MMDD.md`. Not a file in this repo and not a file in the project folder. An unindexed draft is an invisible draft. |
+| **BUILD** | `0.x.y` plus a `MMDD-HHMM` Eastern stamp, in **three literals that must move together**: `api/src/version.ts`, `web/src/environments/environment.ts`, `web/src/environments/environment.production.ts`. **The current value is deliberately not written here** — read it from `/health` and the masthead, or run the STATE PROBE. The masthead shows the API's and the UI's side by side and turns amber on a mismatch; that amber means only half the deploy landed, so fix the deploy rather than silencing the flag. Corollary worth remembering: a commit that changes code **without** bumping the stamp is invisible to `/health`, which will keep reporting the previous value whether or not the deploy landed. |
+| **IaC** | `render.yaml` (Render blueprint — service, plan, region, build command, non-secret env) and `netlify.toml` (Netlify build plus the two proxy rules). No Terraform, no Bicep. Secrets are declared `sync: false` with no values; `DATABASE_URL` is dashboard-only on purpose (§ NEVER #2). |
+
+**The card is a claim, not a fact.** Any session where something does not match reality, check every
+slot: does the clone path exist, does the probe run, does the backlog return rows, does this file
+describe the system actually there. A slot that is filled but WRONG is worse than one marked NONE,
+because NONE gets fixed.
+
 ## What this is
 
 An integration hub for LFODIE's companies: integrations are configured here and the app feeds data
@@ -47,16 +149,10 @@ zero and proves nothing.
 
 ## Landmines
 
-- **`api/src/db/migrate.ts` re-runs EVERY `.sql` in `src/db/` in filename order, every time — there
-  is no ledger table.** Every migration must therefore be idempotent (`if not exists`, `on conflict
-  do nothing`, `create or replace`). One non-idempotent file breaks `npm run migrate` for everyone,
-  permanently.
-- **`DATABASE_URL` is deliberately NOT declared in `render.yaml`** — dashboard only. Declaring it
-  there, even with `sync: false`, made the blueprint authoritative and silently reverted dashboard
-  edits on every push to `main`: the dashboard showed the new value while the process kept the old
-  one, so `/health` passed and only the first query failed. It must be the Supabase **session**
-  pooler (port 5432) — not the direct `db.<ref>` host (IPv6-only, Render is IPv4, `ENETUNREACH`)
-  and not 6543 (transaction mode, wrong for a long-lived `pg.Pool`).
+The two most expensive rules that used to live here — `DATABASE_URL` in `render.yaml`, and
+`migrate.ts` having no ledger table — are now § NEVER #2 and #4. They were moved, not copied: a rule
+with two homes has one that rots.
+
 - **The API origin is a literal in `netlify.toml` in TWO places** (`/api/*` and `/health`) —
   Netlify does not interpolate env vars into redirects. Change both together, and confirm against
   the URL Render actually assigned.
