@@ -80,6 +80,13 @@ body{
 .brand b{display:block;font-size:14px;font-weight:800;letter-spacing:-.01em;color:#fff}
 :root[data-theme="dark"] .brand b{color:var(--ink)}
 .brand span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#7FB6CE;margin-top:3px}
+.railback{display:flex;align-items:center;gap:7px;margin:0 8px 8px;padding:7px 10px;border-radius:6px;
+  font-size:12px;font-family:var(--mono);letter-spacing:.02em;text-decoration:none;
+  color:#7FB6CE;border:1px solid rgba(255,255,255,.16)}
+.railback:hover{color:#fff;border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.07)}
+.railback[hidden]{display:none}
+:root[data-theme="dark"] .railback{color:var(--ink-3);border-color:var(--line)}
+:root[data-theme="dark"] .railback:hover{color:var(--ink);border-color:var(--line-2);background:var(--surface-2)}
 .navbtn{
   appearance:none;background:none;border:0;width:100%;text-align:left;cursor:pointer;
   color:#BDD6E4;font-family:var(--sans);font-size:13.5px;font-weight:600;
@@ -548,7 +555,10 @@ table.tbl td b{color:var(--ink)}
   border:1px solid var(--warn);border-radius:var(--r);padding:10px 14px;font-size:13px;
   font-weight:600;box-shadow:var(--shadow);max-width:calc(100vw - 28px)}
 .newbuild[hidden]{display:none}
-@media (max-width:900px){ .buildchip{order:4;min-height:32px;padding:4px 10px} #syncState{order:5} }
+@media (max-width:900px){
+  .buildchip{order:4;min-height:32px;padding:4px 10px} #syncState{order:5}
+  .railback{margin:0 4px;padding:6px 9px;white-space:nowrap;flex:0 0 auto;min-height:32px}
+}
 
 /* ── sign-in overlay ────────────────────────────────────────────────── */
 #gate{position:fixed;inset:0;z-index:200;background:var(--ground);display:flex;
@@ -624,6 +634,9 @@ pre.sql{
       <b>Integrator Workbench</b>
       <span>LFODIE · control plane</span>
     </div>
+    <!-- The admin links out to here; there was no way back. Hidden in the
+         artifact copies, where "/" is claude.ai and the link would be a lie. -->
+    <a class="railback" id="railBack" href="/" hidden>&#8592; Integrator admin</a>
     <button class="navbtn" data-go="start" aria-current="true">Start here <i id="n-start"></i></button>
     <button class="navbtn" data-go="map">Architecture <i id="n-map"></i></button>
     <button class="navbtn" data-go="caps">Capabilities <i id="n-caps"></i></button>
@@ -1545,7 +1558,7 @@ pre.sql{
   /* The page's own identity, generated from api/src/version.ts. The API returns
    * the SAME literal from /health, which is the only reason comparing them
    * says anything — a page comparing itself to itself always agrees. */
-  window.__BUILD__ = { version: '0.3.0', stamp: '0823-0116', where: 'deployed' };
+  window.__BUILD__ = { version: '0.3.0', stamp: '0823-0135', where: 'deployed' };
   /* ── ONE LOGIN, NOT TWO ─────────────────────────────────────────────
    * The Angular admin keeps its JWT in localStorage under 'integrator_token'
    * (web/src/app/core/auth.service.ts). This page used to keep its own in
@@ -1865,7 +1878,7 @@ try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(S, JSON.pa
    carries a REAL stamp rather than the word "artifact", so a build line pasted
    from this copy is still traceable to a commit; `where` is what says which
    copy it came from. Bump it with the other three literals. */
-const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0823-0116', where: 'artifact' };
+const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0823-0135', where: 'artifact' };
 
 const STORE = window.__PLAN_STORE__ || {
   kind: 'local',
@@ -2766,6 +2779,8 @@ $('#copySvg').addEventListener('click',async()=>{
 function renderBuild(){
   const el = $('#buildChip'); if(!el) return;
   el.innerHTML = `<b>v${esc(BUILD.version)}</b><span>${esc(BUILD.stamp)}</span>`;
+  const rb = $('#railBack');
+  if(rb) rb.hidden = BUILD.where !== 'deployed';
   const rf = $('#railFoot');
   if(rf) rf.innerHTML = BUILD.where === 'deployed'
     ? 'Build <span class="mono">' + esc(BUILD.stamp) + '</span><br>State read live<br>from the API'
