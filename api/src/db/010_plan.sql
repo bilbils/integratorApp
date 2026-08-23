@@ -24,9 +24,9 @@
 -- every run and there is no applied-migrations ledger. Nothing below may assume
 -- it is running for the first time.
 
--- ------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- plan_jobs - one row per candidate job, whatever its status.
--- ------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- The CHECK vocabularies below are deliberate and are NOT the mistake the house
 -- rule warns about. The rule ("an enum means a migration every time a client is
 -- in a new country") is about OPEN sets. These are closed by design: three
@@ -67,9 +67,9 @@ create table if not exists plan_jobs (
 -- The shortlist is the only query this table gets asked in anger.
 create index if not exists plan_jobs_status_idx on plan_jobs (status, sort_order);
 
--- ------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- plan_answers - one row per open call. Keyed by the decision id the tool uses.
--- ------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 create table if not exists plan_answers (
   key        text primary key,
   answer     text        not null default '',
@@ -77,9 +77,9 @@ create table if not exists plan_answers (
   updated_at timestamptz not null default now()
 );
 
--- ------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- updated_at, enforced by the database rather than by convention.
--- ------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- set_updated_at() is created by 003. Migrations run in filename order, so it
 -- exists by the time this file runs. A trigger rather than "every writer
 -- remembers to set it", because a derived column with no trigger behind it is a
@@ -94,9 +94,9 @@ create trigger plan_answers_set_updated_at
   before update on plan_answers
   for each row execute function set_updated_at();
 
--- ------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- RLS, matching 002: on, with no policies.
--- ------------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- Supabase exposes every public table through PostgREST on the anon key.
 -- Enabling RLS with zero policies closes that door completely. The API's own
 -- pooled connection is the table owner and bypasses RLS, so the app is

@@ -12,7 +12,8 @@
     "mcp": "tsx src/mcp/server.ts",
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
-    "probe": "tsx src/ops/probe.ts"
+    "probe": "tsx src/ops/probe.ts",
+    "add-admin": "tsx src/ops/addAdmin.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",

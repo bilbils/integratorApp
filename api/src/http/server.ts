@@ -3,6 +3,7 @@ import { highlightsRouter } from './routes/highlights.js';
 import { agentsRouter } from './routes/agents.js';
 import { consumerAppsRouter } from './routes/consumerApps.js';
 import { authRouter } from './routes/auth.js';
+import { planRouter } from './routes/plan.js';
 import { VERSION, BUILD_STAMP } from '../version.js';
 import { config } from '../config.js';
 
@@ -43,6 +44,9 @@ export function createServer(): express.Express {
   app.use('/api/v1/highlights', highlightsRouter);
   app.use('/api/v1/agents', agentsRouter);
   app.use('/api/v1/consumer-apps', consumerAppsRouter);
+  // The architecture workbench's own storage. Admin-only on every route -
+  // there is no consumer key that should reach the plan.
+  app.use('/api/v1/plan', planRouter);
 
   // Central error handler: log the real error, return a clean 500 (never crash).
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

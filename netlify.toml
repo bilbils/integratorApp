@@ -58,6 +58,18 @@
   status = 200
   force = true
 
+# The workbench is a single static page in web/public/, so Angular's build
+# copies it into the published output. This rule exists because the SPA
+# catch-all below would otherwise swallow a bare /workbench and hand back the
+# Angular shell, which looks like the page 404'd when it did not.
+#
+# It sits ABOVE the catch-all deliberately: Netlify applies redirects in file
+# order and the first match wins.
+[[redirects]]
+  from = "/workbench"
+  to = "/workbench/index.html"
+  status = 200
+
 # Angular routes are client-side; every other path serves the app shell.
 [[redirects]]
   from = "/*"
