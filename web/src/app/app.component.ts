@@ -31,6 +31,17 @@ interface Health {
           <a routerLink="/highlights" routerLinkActive="active">Highlights</a>
           <a routerLink="/agents" routerLinkActive="active">AI Agents</a>
           <a routerLink="/apps" routerLinkActive="active">Apps &amp; Access</a>
+          <!--
+            The workbench is a STATIC page (web/public/workbench/), not an Angular
+            route, so this is a plain href on purpose. routerLink would try to
+            resolve /workbench inside the SPA, find no route, and fall through to
+            the catch-all - which looks exactly like a 404 that is not one.
+            netlify.toml has a matching rule above the SPA catch-all for the same
+            reason. Marked so it reads as leaving the admin rather than being a
+            fourth screen inside it.
+          -->
+          <a href="/workbench" class="nav-out"
+             title="Architecture workbench - the planning tool (separate page)">Workbench &#8599;</a>
         </nav>
         <button class="linkbtn" (click)="logout()">Log out</button>
       }

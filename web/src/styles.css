@@ -87,6 +87,11 @@ h1, h2, h3, h4 { letter-spacing: 0.02em; }
 .nav a:hover { color: #eaf1f6; }
 .nav a.active { color: #fff; border-bottom-color: var(--cyan); }
 
+/* Leaves the admin for the static workbench page. Tinted rather than bolded so
+   it reads as "different destination", not "more important than the others". */
+.nav a.nav-out { color: var(--cyan); }
+.nav a.nav-out:hover { color: #eaf1f6; }
+
 .container { max-width: 900px; margin: 0 auto; padding: 26px 22px 48px; }
 .container.wide { max-width: 1220px; }
 
