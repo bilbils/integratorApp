@@ -15,4 +15,4 @@
  * Format: MMDD-HHMM (Eastern), matching the outputs bundle naming.
  */
 export const VERSION = '0.3.0';
-export const BUILD_STAMP = '0823-1548';
+export const BUILD_STAMP = '0823-1802';
