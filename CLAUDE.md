@@ -57,6 +57,26 @@ remove one on your own inference — flag it for Bill instead.**
    literal string `<pick an admin password>`; the re-seed that fixed it rotated the consumer key a
    second time.
 
+   **Corollary, and it has now caught this project TWICE: never hand over a copy-pasteable command
+   with a secret-shaped placeholder inside it. Prompt for the value instead.** On 2026-08-23 the
+   same shape was offered again for `add-admin` and Bill pasted `'<new, 12+ chars>'` as the literal
+   password. It only failed because npm was run from the wrong directory and never reached the
+   database — the placeholder is 17 characters, so the 12-character floor would **not** have caught
+   it. The safe shape keeps the value off the command line and out of PowerShell history:
+
+   ```powershell
+   cd C:\dev\project\integratorApp
+   $s = Read-Host 'New password' -AsSecureString
+   $env:ADMIN_EMAIL = 'someone@example.com'
+   $env:ADMIN_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+     [Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+   npm --prefix api run add-admin
+   Remove-Item Env:\ADMIN_PASSWORD
+   ```
+
+   Note also that `npm --prefix api` is relative to the **current directory** — run it from the repo
+   root or it looks for `<cwd>\api\package.json` and fails with ENOENT, which is what happened.
+
 4. **NEVER add a non-idempotent `.sql` to `api/src/db/`.** `migrate.ts` re-runs **every** file in
    that folder, in filename order, on every invocation — there is no ledger table. One
    non-idempotent file breaks `npm run migrate` for everyone, permanently. Use `if not exists`,
