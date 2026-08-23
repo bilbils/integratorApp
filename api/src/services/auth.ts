@@ -69,7 +69,11 @@ export async function verifyConsumerKey(key: string | undefined): Promise<Consum
 /** Admin UI login. App-level email/password + JWT (NOT Supabase Auth) - portable to Entra later. */
 export async function adminLogin(email: string, password: string): Promise<string | null> {
   const { rows } = await pool.query<{ id: string; password_hash: string }>(
-    `select id, password_hash from admin_users where email = $1`,
+    // lower() on BOTH sides on purpose. add-admin stores the email lowercased,
+    // and nothing in the login path normalised the input, so a user who typed
+    // Josh.Alimi@ipta.com got "invalid credentials" and read it as a wrong
+    // password. Found 2026-08-22 while adding the second admin.
+    `select id, password_hash from admin_users where lower(email) = lower($1)`,
     [email],
   );
   const user = rows[0];

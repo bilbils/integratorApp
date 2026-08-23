@@ -1400,7 +1400,7 @@ pre.sql{
   /* The page's own identity, generated from api/src/version.ts. The API returns
    * the SAME literal from /health, which is the only reason comparing them
    * says anything — a page comparing itself to itself always agrees. */
-  window.__BUILD__ = { version: '0.3.0', stamp: '0822-2222', where: 'deployed' };
+  window.__BUILD__ = { version: '0.3.0', stamp: '0822-2250', where: 'deployed' };
   var TOKEN_KEY = 'integrator-workbench-token';
   var token = null;
   try { token = sessionStorage.getItem(TOKEN_KEY); } catch(e) {}
@@ -1654,7 +1654,11 @@ try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(S, JSON.pa
  * the same literal /health returns - that is what makes the comparison below
  * mean something rather than comparing a page to itself.
  */
-const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: 'artifact', where: 'artifact' };
+/* The deployed page overwrites this from api/src/version.ts. The fallback
+   carries a REAL stamp rather than the word "artifact", so a build line pasted
+   from this copy is still traceable to a commit; `where` is what says which
+   copy it came from. Bump it with the other three literals. */
+const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0822-2222', where: 'artifact' };
 
 const STORE = window.__PLAN_STORE__ || {
   kind: 'local',

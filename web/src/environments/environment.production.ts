@@ -17,5 +17,5 @@
 export const environment = {
   apiBaseUrl: '/api/v1',
   version: '0.3.0',
-  buildStamp: '0822-2222',
+  buildStamp: '0822-2250',
 };
