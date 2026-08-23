@@ -610,11 +610,12 @@ pre.sql{
     <button class="navbtn" data-go="lessons">Operating rules <i id="n-les"></i></button>
     <button class="navbtn" data-go="decisions">Open calls <i id="n-dec"></i></button>
     <button class="navbtn" data-go="probe">Live state</button>
-    <div class="railfoot">
-      Built 2026-08-23<br>
-      Verified against repo<br>
-      <span class="mono">76d444d</span> + live DB
-    </div>
+    <!-- Nothing here may be a value that can go stale. It used to read
+         "76d444d + live DB", which was true for about eight hours and then
+         quietly claimed the page had been verified against a commit three
+         pushes back. The build stamp lives in the chip top-right, where it is
+         injected from api/src/version.ts and checked against /health. -->
+    <div class="railfoot" id="railFoot"></div>
   </nav>
 
   <main>
@@ -1518,7 +1519,7 @@ pre.sql{
   /* The page's own identity, generated from api/src/version.ts. The API returns
    * the SAME literal from /health, which is the only reason comparing them
    * says anything — a page comparing itself to itself always agrees. */
-  window.__BUILD__ = { version: '0.3.0', stamp: '0823-0024', where: 'deployed' };
+  window.__BUILD__ = { version: '0.3.0', stamp: '0823-0101', where: 'deployed' };
   var TOKEN_KEY = 'integrator-workbench-token';
   var token = null;
   try { token = sessionStorage.getItem(TOKEN_KEY); } catch(e) {}
@@ -1805,7 +1806,7 @@ try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(S, JSON.pa
    carries a REAL stamp rather than the word "artifact", so a build line pasted
    from this copy is still traceable to a commit; `where` is what says which
    copy it came from. Bump it with the other three literals. */
-const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0823-0024', where: 'artifact' };
+const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0823-0101', where: 'artifact' };
 
 const STORE = window.__PLAN_STORE__ || {
   kind: 'local',
@@ -2703,6 +2704,10 @@ $('#copySvg').addEventListener('click',async()=>{
 function renderBuild(){
   const el = $('#buildChip'); if(!el) return;
   el.innerHTML = `<b>v${esc(BUILD.version)}</b><span>${esc(BUILD.stamp)}</span>`;
+  const rf = $('#railFoot');
+  if(rf) rf.innerHTML = BUILD.where === 'deployed'
+    ? 'Build <span class="mono">' + esc(BUILD.stamp) + '</span><br>State read live<br>from the API'
+    : 'Build <span class="mono">' + esc(BUILD.stamp) + '</span><br>Artifact copy<br>state is a snapshot';
 }
 on('#buildChip','click',async()=>{
   const line = `Integrator Workbench · v${BUILD.version} · ${BUILD.stamp} · ${BUILD.where}`
