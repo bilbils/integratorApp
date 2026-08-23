@@ -433,6 +433,22 @@ dialog::backdrop{background:rgba(11,31,51,.42)}
   button.btn:hover,a.btn:hover{border-color:var(--line-2);color:var(--ink)}
 }
 
+/* ── build chip ─────────────────────────────────────────────────────── */
+/* The other .stat chips are read-only text, so 23px tall is fine for them.
+   This one is a BUTTON, and a 23px tap target on a phone is a miss waiting to
+   happen — min-height floors it above the 24px minimum and widens on mobile. */
+.buildchip{cursor:pointer;font-family:var(--mono);border-color:var(--line-2);gap:6px;
+  align-items:center;min-height:28px}
+.buildchip:hover{border-color:var(--accent);color:var(--accent-ink)}
+.buildchip.stale{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.buildchip b{font-weight:600}
+.newbuild{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:120;
+  display:flex;gap:12px;align-items:center;background:var(--warn-soft);color:var(--warn);
+  border:1px solid var(--warn);border-radius:var(--r);padding:10px 14px;font-size:13px;
+  font-weight:600;box-shadow:var(--shadow);max-width:calc(100vw - 28px)}
+.newbuild[hidden]{display:none}
+@media (max-width:900px){ .buildchip{order:4;min-height:32px;padding:4px 10px} #syncState{order:5} }
+
 /* ── sign-in overlay ────────────────────────────────────────────────── */
 #gate{position:fixed;inset:0;z-index:200;background:var(--ground);display:flex;
   align-items:center;justify-content:center;padding:24px}
@@ -483,6 +499,14 @@ pre.sql{
   </form>
 </div>
 
+<div class="newbuild" id="newBuild" hidden>
+  <span>A newer build is deployed.</span>
+  <span class="savechip" id="newBuildWhat" style="font-weight:400"></span>
+  <span style="flex:1"></span>
+  <button class="btn sm primary" id="newBuildGo">Reload</button>
+  <button class="btn sm" id="newBuildNo">Later</button>
+</div>
+
 <div class="seedbar" id="seedBar" hidden>
   <b>The plan is empty.</b>
   <span class="muted">Load the 17 researched staffing jobs as a starting catalogue?</span>
@@ -518,6 +542,9 @@ pre.sql{
     <header class="top">
       <h1>Integrator Architecture Workbench</h1><span id="whoami" class="whoami"></span>
       <div class="strip" id="strip"></div>
+      <span class="savechip" id="syncState"></span>
+      <button class="stat buildchip" id="buildChip" type="button"
+              title="Click to copy the exact build, for pasting into a note"></button>
       <button class="btn sm" id="themeBtn" title="Toggle theme">◐</button>
     </header>
 
@@ -1369,6 +1396,11 @@ pre.sql{
 (function(){
   "use strict";
   var API = '/api/v1';
+
+  /* The page's own identity, generated from api/src/version.ts. The API returns
+   * the SAME literal from /health, which is the only reason comparing them
+   * says anything — a page comparing itself to itself always agrees. */
+  window.__BUILD__ = { version: '0.3.0', stamp: '0822-2222', where: 'deployed' };
   var TOKEN_KEY = 'integrator-workbench-token';
   var token = null;
   try { token = sessionStorage.getItem(TOKEN_KEY); } catch(e) {}
@@ -1547,6 +1579,46 @@ pre.sql{
     if(seedNo) seedNo.addEventListener('click', function(){ document.getElementById('seedBar').hidden = true; });
 
     if(token) start(); else gate(true);
+
+    /* ── new-build detection ──────────────────────────────────────────
+     * /health is public and returns the API's own stamp. Both halves ship
+     * from one commit, so when it stops matching this page's stamp the
+     * browser is holding a stale bundle and a reload will fix it.
+     *
+     * The honest limit, stated because the same trap has cost this project a
+     * day before: if a commit ships WITHOUT bumping the stamp, the two agree
+     * whether or not the deploy landed, and this check sees nothing. It
+     * detects a stale TAB, not a failed deploy. */
+    var banner = document.getElementById('newBuild');
+    var chip = document.getElementById('buildChip');
+    async function checkBuild(){
+      try{
+        var r = await fetch('/health', { cache: 'no-store' });
+        if(!r.ok) return;
+        var h = await r.json();
+        var live = h && h.build;
+        if(live && live !== window.__BUILD__.stamp){
+          if(banner){
+            banner.hidden = false;
+            var w = document.getElementById('newBuildWhat');
+            if(w) w.textContent = 'This tab is on ' + window.__BUILD__.stamp + '; the server is on ' + live + '.';
+          }
+          if(chip) chip.classList.add('stale');
+        } else {
+          if(banner) banner.hidden = true;
+          if(chip) chip.classList.remove('stale');
+        }
+      }catch(e){ /* offline or blocked — say nothing rather than cry wolf */ }
+    }
+    var reload = document.getElementById('newBuildGo');
+    if(reload) reload.addEventListener('click', function(){ location.reload(true); });
+    var dismiss = document.getElementById('newBuildNo');
+    if(dismiss) dismiss.addEventListener('click', function(){ if(banner) banner.hidden = true; });
+    checkBuild();
+    setInterval(function(){ if(document.visibilityState === 'visible') checkBuild(); }, 60000);
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') checkBuild();
+    });
   });
 })();
 </script>
@@ -1576,6 +1648,14 @@ try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(S, JSON.pa
  * a second hand-maintained copy of this file would be the version that goes
  * stale, and it would go stale silently.
  */
+/**
+ * What this page IS, so a bug report can name it exactly. The deployed build
+ * has its stamp injected from api/src/version.ts at generation time, which is
+ * the same literal /health returns - that is what makes the comparison below
+ * mean something rather than comparing a page to itself.
+ */
+const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: 'artifact', where: 'artifact' };
+
 const STORE = window.__PLAN_STORE__ || {
   kind: 'local',
   putJob(){}, delJob(){}, putAnswer(){},
@@ -2451,7 +2531,24 @@ $('#copySvg').addEventListener('click',async()=>{
   catch(e){ toast('Clipboard blocked in this view'); }
 });
 
+/* ── build chip ─────────────────────────────────────────────────────── */
+function renderBuild(){
+  const el = $('#buildChip'); if(!el) return;
+  el.innerHTML = `<b>v${esc(BUILD.version)}</b><span>${esc(BUILD.stamp)}</span>`;
+}
+on('#buildChip','click',async()=>{
+  const line = `Integrator Workbench · v${BUILD.version} · ${BUILD.stamp} · ${BUILD.where}`
+    + ` · ${location.origin + location.pathname} · ${new Date().toISOString()}`;
+  try{ await navigator.clipboard.writeText(line); toast('Build copied — paste it into the note'); }
+  catch(e){
+    // Clipboard is blocked in some embedded contexts. Showing the string is
+    // more use than an apology, so it can be selected by hand.
+    toast(line);
+  }
+});
+
 /* ── init ───────────────────────────────────────────────────────────── */
+renderBuild();
 $('#n-start').textContent = D3.basic.length + D3.adv.length;
 $('#n-int').textContent  = D4.integrations.length;
 $('#n-dg').textContent   = D5.lenses.length;
