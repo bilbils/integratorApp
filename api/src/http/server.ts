@@ -4,6 +4,7 @@ import { agentsRouter } from './routes/agents.js';
 import { consumerAppsRouter } from './routes/consumerApps.js';
 import { authRouter } from './routes/auth.js';
 import { planRouter } from './routes/plan.js';
+import { planOptionsRouter } from './routes/planOptions.js';
 import { VERSION, BUILD_STAMP } from '../version.js';
 import { config } from '../config.js';
 
@@ -47,6 +48,9 @@ export function createServer(): express.Express {
   // The architecture workbench's own storage. Admin-only on every route -
   // there is no consumer key that should reach the plan.
   app.use('/api/v1/plan', planRouter);
+  // The options catalogue rides the same rule: admin only, applied inside the
+  // router so a future mount cannot forget it.
+  app.use('/api/v1/plan-options', planOptionsRouter);
 
   // Central error handler: log the real error, return a clean 500 (never crash).
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
