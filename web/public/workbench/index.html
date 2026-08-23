@@ -514,6 +514,30 @@ table.tbl td b{color:var(--ink)}
   .setbtn{width:auto}
 }
 
+/* ── the plan summary + add-an-option ───────────────────────────────── */
+.plansum{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);
+  padding:12px 14px;margin-bottom:14px}
+.plansum summary{cursor:pointer;font-weight:750;font-size:13.5px;list-style:none;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.plansum summary::-webkit-details-marker{display:none}
+.plansum summary::before{content:"\25B8";font-size:11px;color:var(--ink-3);transition:transform .15s}
+.plansum[open] summary::before{transform:rotate(90deg)}
+.planrow{display:grid;grid-template-columns:190px 1fr;gap:4px 14px;padding:7px 0;
+  border-top:1px solid var(--line);font-size:12.5px}
+.planrow:first-of-type{border-top:0}
+.planrow .d{color:var(--ink-3);font-family:var(--mono);font-size:11px;letter-spacing:.03em}
+.planrow .p b{font-weight:700}
+.planrow .p.open b{color:var(--bad)}
+.planrow .why{display:block;color:var(--ink-2);font-size:11.5px;margin-top:2px}
+.addbox{border:1px dashed var(--line-2);border-radius:var(--r);background:var(--surface-2);
+  padding:11px 13px;margin-bottom:10px}
+.addbox .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:8px 0}
+.addbox input{width:100%;font:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:6px;
+  background:var(--surface);color:var(--ink);padding:6px 8px}
+.addbox label{display:block;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+  font-family:var(--mono);color:var(--ink-3);margin-bottom:3px}
+@media (max-width:900px){ .planrow{grid-template-columns:1fr} }
+
 .buildchip{cursor:pointer;font-family:var(--mono);border-color:var(--line-2);gap:6px;
   align-items:center;min-height:28px}
 .buildchip:hover{border-color:var(--accent);color:var(--accent-ink)}
@@ -568,7 +592,9 @@ pre.sql{
 <div id="gate">
   <form class="gatebox" id="gateForm">
     <h2>Integrator Workbench</h2>
-    <p>Sign in with your Integrator admin account — the same one the admin screens use.</p>
+    <p>Sign in with your Integrator admin account. It is the same session as the admin
+    screens &mdash; sign in here and Highlights, AI Agents and Apps &amp; Access are already
+    signed in, and the other way round.</p>
     <p class="gateerr" id="gateErr"></p>
     <label><span class="lb">Email</span><input type="text" id="gateEmail" autocomplete="username" inputmode="email"></label>
     <label><span class="lb">Password</span><input type="password" id="gatePass" autocomplete="current-password"></label>
@@ -1519,17 +1545,44 @@ pre.sql{
   /* The page's own identity, generated from api/src/version.ts. The API returns
    * the SAME literal from /health, which is the only reason comparing them
    * says anything — a page comparing itself to itself always agrees. */
-  window.__BUILD__ = { version: '0.3.0', stamp: '0823-0101', where: 'deployed' };
-  var TOKEN_KEY = 'integrator-workbench-token';
-  var token = null;
-  try { token = sessionStorage.getItem(TOKEN_KEY); } catch(e) {}
+  window.__BUILD__ = { version: '0.3.0', stamp: '0823-0116', where: 'deployed' };
+  /* ── ONE LOGIN, NOT TWO ─────────────────────────────────────────────
+   * The Angular admin keeps its JWT in localStorage under 'integrator_token'
+   * (web/src/app/core/auth.service.ts). This page used to keep its own in
+   * sessionStorage under a different key, so signing into the admin and then
+   * opening /workbench asked for a password a second time, and signing out of
+   * one left the other signed in. Same origin, same auth, same token — so:
+   *
+   *   READ  the admin's key first, fall back to this page's own.
+   *   WRITE both on sign-in, so it works in either direction.
+   *   CLEAR both when a session lapses, so signing out means signing out.
+   *
+   * This moves the workbench session from sessionStorage (dies with the tab)
+   * to localStorage (survives it). That is not a lowering of the bar — it is
+   * the admin's existing behaviour, and having the two disagree was the bug. */
+  var TOKEN_KEY = 'integrator-workbench-token';   // this page's legacy key
+  var ADMIN_KEY = 'integrator_token';             // the Angular admin's key
+  function readToken(){
+    try { var t = localStorage.getItem(ADMIN_KEY); if(t) return t; } catch(e) {}
+    try { return sessionStorage.getItem(TOKEN_KEY); } catch(e) {}
+    return null;
+  }
+  function writeToken(t){
+    try { localStorage.setItem(ADMIN_KEY, t); } catch(e) {}
+    try { sessionStorage.setItem(TOKEN_KEY, t); } catch(e) {}
+  }
+  function clearToken(){
+    try { localStorage.removeItem(ADMIN_KEY); } catch(e) {}
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch(e) {}
+  }
+  var token = readToken();
 
   function gate(show, msg){
     var g = document.getElementById('gate');
     if(g) g.hidden = !show;
     var e = document.getElementById('gateErr');
     if(e) e.textContent = msg || '';
-    if(show){ try{ sessionStorage.removeItem(TOKEN_KEY); }catch(_){} token = null; }
+    if(show){ clearToken(); token = null; }
   }
 
   // Every call goes through here so a lapsed session has exactly one behaviour.
@@ -1621,6 +1674,12 @@ pre.sql{
         .then(function(){ flash('saved'); })
         .catch(function(e){ if(e.message !== 'unauthorized') flash('not saved — ' + e.message, true); });
     },
+    delOption: function(slug){
+      chip('removing…');
+      window.__PLAN_API__('DELETE', '/plan-options/' + encodeURIComponent(slug))
+        .then(function(){ flash('removed'); })
+        .catch(function(e){ if(e.message !== 'unauthorized') flash('not removed — ' + e.message, true); });
+    },
     putOption: function(opt){
       // The whole row goes back, not a patch: plan_options is an upsert on slug,
       // and sending a partial row would blank every field the UI did not touch.
@@ -1700,11 +1759,11 @@ pre.sql{
         var data = await res.json();
         if(!data || !data.token){ gate(true, 'Sign-in succeeded but no session came back. Tell Bill.'); return; }
         token = data.token;
-        try { sessionStorage.setItem(TOKEN_KEY, token); } catch(_){}
+        writeToken(token);   // both keys — this also signs you into the admin
         document.getElementById('gatePass').value = '';
         await start();
       } catch(e) {
-        gate(true, 'Could not reach the API. If you are on the shared site password, that is a different box — this one is your admin login.');
+        gate(true, 'Could not reach the API. Check your connection and try again.');
       } finally {
         btn.disabled = false; btn.textContent = 'Sign in';
       }
@@ -1787,7 +1846,7 @@ const on = (sel,ev,fn)=>{ const el=$(sel); if(el) el.addEventListener(ev,fn); };
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* ── state ──────────────────────────────────────────────────────────── */
-let S = { picked:{}, jobs:{}, custom:[], answers:{}, opts:{}, probe:null, mpProbe:null };
+let S = { picked:{}, jobs:{}, custom:[], answers:{}, opts:{}, added:[], probe:null, mpProbe:null };
 try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(S, JSON.parse(raw)); }catch(e){}
 /**
  * Storage adapter. The artifact keeps state in this browser; the deployed page
@@ -1806,11 +1865,11 @@ try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(S, JSON.pa
    carries a REAL stamp rather than the word "artifact", so a build line pasted
    from this copy is still traceable to a commit; `where` is what says which
    copy it came from. Bump it with the other three literals. */
-const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0823-0101', where: 'artifact' };
+const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0823-0116', where: 'artifact' };
 
 const STORE = window.__PLAN_STORE__ || {
   kind: 'local',
-  putJob(){}, delJob(){}, putAnswer(){}, putOption(){},
+  putJob(){}, delJob(){}, putAnswer(){}, putOption(){}, delOption(){},
 };
 const SERVER = STORE.kind === 'server';
 function save(){
@@ -1845,6 +1904,9 @@ $$('.navbtn').forEach(b=>b.addEventListener('click',()=>{
   $$('.view').forEach(v=>v.setAttribute('data-active', String(v.dataset.view===b.dataset.go)));
   window.scrollTo(0,0);
   if(b.dataset.go==='map') requestAnimationFrame(drawWires);
+  // Recompute the chosen-stack lens on arrival. It is derived from the picks,
+  // so a cached copy is a diagram that quietly disagrees with the plan.
+  if(b.dataset.go==='diagrams' && curSpec && curSpec.id === 'LC') showDiagram(chosenLens());
 }));
 $('#themeBtn').addEventListener('click',()=>{
   const r=document.documentElement;
@@ -2729,7 +2791,8 @@ let curSet = D6.sets[0].key;
  *  with rows from plan_options. Same merge shape as jobs, deliberately. */
 function allOptions(){
   if(SERVER && Array.isArray(S.serverOptions) && S.serverOptions.length) return S.serverOptions;
-  return D6.options.map(o => Object.assign({}, o, S.opts[o.slug] || {}));
+  return D6.options.concat(S.added || [])
+    .map(o => Object.assign({}, o, S.opts[o.slug] || {}));
 }
 function optIndex(){
   const m = {}; allOptions().forEach(o => { m[o.slug] = o; }); return m;
@@ -2816,7 +2879,10 @@ function renderOptions(){
       ${o.src ? `<p class="xs" style="margin:4px 0 0"><a href="${esc(o.src)}" target="_blank" rel="noopener">source</a></p>` : ''}
       <div class="statusbtns">${OPT_STATUS.map(st =>
         `<button class="btn sm" data-opt="${esc(o.slug)}" data-st="${st}"
-          aria-pressed="${o.status===st}">${OPT_LABEL[st]}</button>`).join('')}</div>
+          aria-pressed="${o.status===st}">${OPT_LABEL[st]}</button>`).join('')}
+        ${o.origin === 'added'
+          ? `<button class="btn sm" data-del="${esc(o.slug)}" title="Only an option you added can be removed. A researched one gets Rejected, so the fact that it was considered survives.">Remove</button>`
+          : ''}</div>
       <textarea data-note="${esc(o.slug)}" placeholder="Why — one line. This is the bit anyone reading the plan later actually needs.">${esc(o.rationale||'')}</textarea>
     </article>`;
   }).join('');
@@ -2824,14 +2890,142 @@ function renderOptions(){
     ? `<div class="card" style="margin-top:12px"><b style="font-size:12.5px">Could not be verified from a primary source</b>
        <ul style="margin:6px 0 0;padding-left:18px">${set.unverified.map(u=>`<li class="xs" style="margin-bottom:3px">${esc(u)}</li>`).join('')}</ul></div>`
     : '';
-  body.innerHTML = `<div class="vhead" style="margin-bottom:10px">
+  const addBox = `<div class="addbox">
+      <b style="font-size:12.5px">Not on the list? Add it.</b>
+      <span class="muted xs"> It becomes a row like any other, marked <i>added</i>, and can be chosen,
+      shortlisted or removed. Leave the price blank if you do not know it &mdash; it will be excluded
+      from the total and named, rather than counted as free.</span>
+      <div class="grid">
+        <div><label for="addName">Name</label><input id="addName" placeholder="e.g. Bullhorn Automation"></div>
+        <div><label for="addVendor">Vendor</label><input id="addVendor" placeholder="e.g. Bullhorn, Inc."></div>
+        <div><label for="addOne">What it is</label><input id="addOne" placeholder="One plain sentence"></div>
+        <div><label for="addCost">$ / month (optional)</label><input id="addCost" type="number" min="0" step="1" placeholder="blank = unknown"></div>
+      </div>
+      <button class="btn sm primary" id="addGo" type="button">Add to ${esc(set.name)}</button>
+      <span class="xs muted" id="addErr" style="margin-left:8px"></span>
+    </div>`;
+  body.innerHTML = renderPlanSummary() + `<div class="vhead" style="margin-bottom:10px">
       <h3 style="margin:0 0 3px;font-size:15px;font-weight:750">${esc(set.name)}</h3>
       <p style="margin:0"><b>${esc(set.question)}</b></p>
-      <p style="margin:5px 0 0">${esc(set.why)}</p></div>${cards}${unv}`;
+      <p style="margin:5px 0 0">${esc(set.why)}</p></div>${addBox}${cards}${unv}`;
+  on('#addGo','click',()=>{
+    const n=$('#addName').value.trim();
+    if(!n){ $('#addErr').textContent = 'It needs a name.'; return; }
+    addOption(curSet, n, $('#addVendor').value, $('#addOne').value, $('#addCost').value);
+  });
+  on('#copyPlan','click',async()=>{
+    const md = planMarkdown();
+    try{ await navigator.clipboard.writeText(md); toast('The plan is on your clipboard — paste it to Josh'); }
+    catch(e){ toast('Clipboard blocked in this view'); }
+  });
+  $$('#setBody [data-del]').forEach(b=>b.addEventListener('click',()=>removeOption(b.dataset.del)));
   $$('#setBody .statusbtns .btn').forEach(b => b.addEventListener('click',
     () => setOptStatus(b.dataset.opt, b.dataset.st)));
   $$('#setBody textarea[data-note]').forEach(t => t.addEventListener('change',
     () => setOptRationale(t.dataset.note, t.value)));
+}
+
+/* ── ADDING AN OPTION ───────────────────────────────────────────────
+ * "How do I add for example a connector" — Bill, 2026-08-23.
+ * A hand-added option is a first-class row with origin='added'. It arrives
+ * unpriced and marked `unknown` on purpose: an option somebody typed in has no
+ * researched rate card behind it, and pretending otherwise would put a number
+ * with no provenance into the same total as 85 published ones.
+ * Only an added option can be deleted. A catalogue row gets Rejected instead,
+ * because "we looked at it and said no" is worth keeping. */
+function slugify(t){
+  return String(t).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48);
+}
+function addOption(setKey, name, vendor, one, monthly){
+  const base = slugify(name) || 'option';
+  let slug = setKey + ':' + base, n = 2;
+  const taken = new Set(allOptions().map(o=>o.slug));
+  while(taken.has(slug)){ slug = setKey + ':' + base + '-' + (n++); }
+  const priced = Number(monthly) > 0;
+  const row = {
+    slug, set_key:setKey, name:String(name).trim(), vendor:String(vendor||'').trim(),
+    one_liner:String(one||'').trim(), pricing: priced ? ('$' + Number(monthly) + '/month, entered by hand') : 'not priced',
+    good:[], bad:[], best:'', fit:'', residency:'n/a', maturity:'growing', src:'',
+    cost_model: priced
+      ? {kind:'flat', driver:'none', base_monthly:Number(monthly), included:0, per_unit:0, tiers:[],
+         markup_pct:0, min_monthly:0, annual_only:false, setup_usd:0, confidence:'estimated',
+         basis:'Entered by hand in the workbench, not researched against a vendor page.', caveat:''}
+      : {kind:'quote', driver:'none', base_monthly:0, included:0, per_unit:0, tiers:[],
+         markup_pct:0, min_monthly:0, annual_only:false, setup_usd:0, confidence:'unknown',
+         basis:'Added by hand with no price. Excluded from the total until somebody puts a number on it.', caveat:''},
+    status:'candidate', rationale:'', origin:'added', sort_order:900,
+  };
+  if(SERVER){ (S.serverOptions = S.serverOptions || []).push(row); STORE.putOption(row); }
+  else { (S.added = S.added || []).push(row); save(); }
+  renderOptions(); renderPricing(); renderStrip();
+}
+function removeOption(slug){
+  const o = optIndex()[slug];
+  if(!o || o.origin !== 'added') return;
+  if(SERVER){
+    S.serverOptions = (S.serverOptions||[]).filter(x=>x.slug!==slug);
+    STORE.delOption(slug);
+  } else {
+    S.added = (S.added||[]).filter(x=>x.slug!==slug);
+    delete S.opts[slug]; save();
+  }
+  renderOptions(); renderPricing(); renderStrip();
+}
+
+/* ── THE PLAN ───────────────────────────────────────────────────────
+ * "how do I identify which ones I'm actually going to implement" — the answer
+ * is one screen, not sixteen. Chosen is the commitment; everything else is
+ * still a conversation. An open decision is drawn in red here and as a dashed
+ * red box in Draw it, because a plan that hides its holes is not a plan. */
+function planRows(){
+  return D6.sets.map(set => {
+    const c = chosenOf(set.key);
+    return {set, chosen:c,
+            why: c ? (c.rationale || '') : '',
+            cost: c ? monthly(c.cost_model, params()) : null};
+  });
+}
+function renderPlanSummary(){
+  const rows = planRows();
+  const done = rows.filter(r=>r.chosen).length;
+  const body = rows.map(r => `<div class="planrow">
+      <span class="d">${esc(r.set.name)}</span>
+      <span class="p ${r.chosen?'':'open'}">
+        <b>${r.chosen ? esc(r.chosen.name) : 'OPEN — nothing chosen'}</b>
+        ${r.chosen && r.cost ? `<span class="muted mono xs"> · ${esc(r.cost.known ? fmt(r.cost.usd)+'/mo' : 'quote')}</span>` : ''}
+        ${r.why ? `<span class="why">${esc(r.why)}</span>` : ''}
+      </span></div>`).join('');
+  return `<details class="plansum" ${done < D6.sets.length ? 'open' : ''}>
+    <summary>What we are actually going to build
+      <span class="conf ${done===D6.sets.length?'published':'estimated'}">${done} of ${D6.sets.length} decided</span>
+      <span style="flex:1"></span>
+      <button class="btn sm" id="copyPlan" type="button">Copy the plan</button>
+    </summary>
+    <div style="margin-top:9px">${body}</div>
+    <p class="xs muted" style="margin:9px 0 0">Chosen is the commitment. Shortlist means still in the
+    conversation, Rejected means looked at and said no — which is worth keeping, so a catalogue option
+    is rejected rather than deleted. Only an option you added by hand can be removed.</p>
+  </details>`;
+}
+function planMarkdown(){
+  const rows = planRows(), P = params();
+  const L = ['# Integrator / Staffility — the plan', '',
+             'Build ' + BUILD.stamp + ' · ' + rows.filter(r=>r.chosen).length + ' of ' + rows.length + ' decisions made.', ''];
+  let sum = 0, quotes = [];
+  rows.forEach(r => {
+    if(!r.chosen){ L.push('- **' + r.set.name + '** — OPEN, nothing chosen.'); return; }
+    const m = monthly(r.chosen.cost_model, P);
+    if(m.known) sum += m.usd; else quotes.push(r.chosen.name);
+    L.push('- **' + r.set.name + '** — ' + r.chosen.name
+      + (r.chosen.vendor ? ' (' + r.chosen.vendor + ')' : '')
+      + ' · ' + (m.known ? fmt(m.usd) + '/mo' : 'quote required')
+      + (r.why ? '\n  - ' + r.why : ''));
+  });
+  L.push('', '**' + fmt(sum) + '/month** at the current load' +
+    (quotes.length ? ', **excluding ' + quotes.length + ' quote-only option' + (quotes.length>1?'s':'') +
+      ' (' + quotes.join(', ') + ')** — each of those can be larger than this whole figure.' : '.'));
+  L.push('', 'Load: ' + KNOBS.map(k=>k.n + ' ' + P[k.k]).join(' · '));
+  return L.join('\n');
 }
 
 /* ── PRICING ────────────────────────────────────────────────────────── */

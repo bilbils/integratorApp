@@ -9,7 +9,20 @@ no reason attached gets deleted by a future session that cannot see the reason. 
 remove one on your own inference — flag it for Bill instead.**
 
 1. **NEVER treat a response from the `netlify.app` origin as evidence about the API, auth, the
-   database, or a deploy.** The site has visitor-access password protection on for production *and*
+   database, or a deploy.**
+
+   > ⚠ **PREMISE CHANGED 2026-08-23 — AWAITING BILL'S AMENDMENT. Do not act on the paragraph below
+   > as written, and do not delete it.** Bill asked for the Netlify visitor-access gate to be turned
+   > **OFF** so Josh needs only his Integrator login. It is off — verified by reading the project
+   > back from Netlify's API (`requiresPassword: false`, `requiresSSOTeamLogin: false`), not by
+   > trusting the write, which returned a Cloudflare 502 while succeeding. **A 401 from that origin
+   > now does mean the app's auth.** The *lesson* is permanent and must survive any rewrite: never
+   > accept a status code as evidence when a total failure returns the same code. The *fact* about
+   > this site is now false. Proposed replacement text is in
+   > `<PROJECT DIR>\drafts\Integrator-App-Options-Catalogue-and-Pricing_0823.md`; a session may
+   > not apply it without Bill saying so.
+
+   The site has visitor-access password protection on for production *and*
    previews, which answers with its own HTML form and a **401** before the proxy rule ever runs. A
    total block and a successful-chain-with-bad-credentials return the identical status code, so any
    check whose success criterion is 401 **cannot fail**. Verify against
@@ -192,6 +205,23 @@ with two homes has one that rots.
   so it ports to Entra later. Machine access is per-consumer hashed API keys for reads plus one
   `INGEST_TOKEN` for capture; `requireReader` accepts either. Seeding hardcodes nothing — `npm run
   seed` requires its admin credentials from the environment and throws without them.
+
+## Run agents in parallel
+
+**Standing instruction from Bill, 2026-08-23:** *"always run multiple agents where you can."*
+
+Two mechanics make the difference, and getting either wrong wastes an hour:
+
+- **Multiple `Agent` calls must go in ONE message.** A call issued in its own message blocks until
+  it returns, so six research passes written one per message run *sequentially* — about fourteen
+  minutes each. That is exactly what happened on 2026-08-23 and Bill was right to call it out.
+- **Have each agent WRITE its result to a file and reply with a short summary.** An agent that
+  returns 50 KB of JSON spends it out of the orchestrating context, which is the scarce resource.
+  `research/set-*.json` is the pattern: the agent writes, then replies with the path, the byte
+  count, and up to three findings that would change a decision.
+
+Partition so agents never touch the same file. Backend, generator and page can be three agents;
+two agents editing one HTML file cannot.
 
 ## Before every push
 
