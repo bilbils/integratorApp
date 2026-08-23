@@ -128,7 +128,7 @@ remove one on your own inference — flag it for Bill instead.**
 | **PLAN TABLES** | `plan_jobs`, `plan_answers`, `plan_options` (migrations **010**, **011**, **012**, probe columns in **013**) plus `plan_adrs`, `plan_reconcile`, `plan_issues` (**014** schema, **015** seed) — the workbench's own storage, served by `/api/v1/plan`, `/api/v1/plan-options`, `/api/v1/plan-probes` and `/api/v1/plan-reconcile`, **`requireAdmin` on every route** (`requireReader` would admit a consumer key). 012 and 015 are `on conflict (slug) do nothing` **on purpose**: migrate.ts replays every file, so `do update` would reset every human pick, rationale and verdict. A research refresh is a NEW migration naming only the descriptive columns. **Naming, because it has already cost two failed queries: `plan_adrs`, `plan_issues` and `plan_options` are PLURAL; `plan_reconcile` is singular because one row IS one option set. Status columns carry the table prefix — `adr_status`, `issue_status`, never bare `status` (except `plan_options.status`, which is the pick state).** |
 | **BACKLOG** | **`public.tasks` in the Bills-Master-Plan Supabase project (`acwnpnrjlzhkvqmvotvn`)** — the native backlog that already exists. Do not stand up a second one. Integrator rows: `where title ilike '%integrator%' or ctx ilike '%integrator%'`. Columns that matter: `status`, `priority`, `due`, `world`, `origin`, `needs_decision`. Never write an id into a document before the insert returns it. |
 | **DECISION INDEX** | Cowork **project memory** `MEMORY.md` for the "Integrator App" project — one line per decision, pointing at the dated deep-dives in `<PROJECT DIR>\drafts\*_MMDD.md`. Not a file in this repo and not a file in the project folder. An unindexed draft is an invisible draft. |
-| **BUILD** | `0.x.y` plus a `MMDD-HHMM` Eastern stamp, in **three literals that must move together**: `api/src/version.ts`, `web/src/environments/environment.ts`, `web/src/environments/environment.production.ts`. **The current value is deliberately not written here** — read it from `/health` and the masthead, or run the STATE PROBE. The masthead shows the API's and the UI's side by side and turns amber on a mismatch; that amber means only half the deploy landed, so fix the deploy rather than silencing the flag. Corollary worth remembering: a commit that changes code **without** bumping the stamp is invisible to `/health`, which will keep reporting the previous value whether or not the deploy landed. |
+| **BUILD** | `0.x.y` plus a `MMDD-HHMM` Eastern stamp, in **five literals that must move together**: `api/src/version.ts`, `web/src/environments/environment.ts`, `web/src/environments/environment.production.ts`, and **two inside `web/public/workbench/index.html`** — `window.__BUILD__` (the deployed-page constant) and the `BUILD` fallback that artifact copies read. *Corrected 2026-08-23: this row said three, so a correct three-file bump would have left the workbench page still claiming the old build — the same vacuous-agreement failure this row exists to prevent. Found by grepping the old stamp after bumping the three named files and finding two survivors.* **The current value is deliberately not written here** — read it from `/health` and the masthead, or run the STATE PROBE. The masthead shows the API's and the UI's side by side and turns amber on a mismatch; that amber means only half the deploy landed, so fix the deploy rather than silencing the flag. Corollary worth remembering: a commit that changes code **without** bumping the stamp is invisible to `/health`, which will keep reporting the previous value whether or not the deploy landed. |
 | **IaC** | `render.yaml` (Render blueprint — service, plan, region, build command, non-secret env) and `netlify.toml` (Netlify build plus the two proxy rules). No Terraform, no Bicep. Secrets are declared `sync: false` with no values; `DATABASE_URL` is dashboard-only on purpose (§ NEVER #2). |
 
 **The card is a claim, not a fact.** Any session where something does not match reality, check every
@@ -196,10 +196,22 @@ with two homes has one that rots.
 - **The Netlify proxy times out around 30s; `GATEWAY_TIMEOUT_MS` is 60s.** A slow agent invoke from
   the admin UI can be cut off at the proxy while a server-to-server caller hitting Render directly
   gets the full 60. If a long invoke fails only in the browser, that is why.
-- **`BUILD_STAMP` lives in three files that must move together:** `api/src/version.ts`,
-  `web/src/environments/environment.ts` and `environment.production.ts`. The masthead shows the API's
-  and the UI's side by side and turns amber on a mismatch — that amber is the "only half the deploy
-  landed" signal, so fix the deploy, don't silence the flag.
+- **`BUILD_STAMP` lives in FIVE literals that must move together — § CARD's BUILD row is the list.**
+  It is deliberately not repeated here: this bullet and that row both said "three files" until
+  2026-08-23, which is exactly what a value with two homes does. The masthead shows the API's and the
+  UI's side by side and turns amber on a mismatch — that amber is the "only half the deploy landed"
+  signal, so fix the deploy, don't silence the flag.
+- **There is NO deploy generator.** `web/public/workbench/index.html` **is** the source; earlier notes
+  describing a generator splicing views into it refer to a script that was never committed and is not
+  on disk. Patch the file directly, with exact-match anchors asserted to match before anything is
+  written — a patch that fails halfway leaves a half-patched 370 KB file.
+  *Found:* 2026-08-23, by searching both connected folders and the repo for one.
+- **A check that measures VALUES will not catch a change of SHAPE.** The 2026-08-23 workbench
+  cleanup passed 32/32 and still shipped a masthead that wrapped to two rows, because adding a ninth
+  chip to `#strip` pushed the build chip down and nothing asked "does the header still fit on one
+  row". Height is measurable; it was simply never measured. Note also that `.strip` is re-laid by a
+  `max-width` media query around line 402 of that file, so a `.strip` rule added *after* it silently
+  overrides the mobile layout — edit the original rule instead.
 - **`environment.production.ts` says `/api/v1` on purpose.** Putting a full `https://` URL there
   reintroduces CORS for no benefit and couples the frontend build to the API's hostname.
 - **`api/src/http/server.ts.bak.pre-cors` is tracked.** There are no secrets in it — but a `.bak` in
