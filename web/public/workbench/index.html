@@ -122,7 +122,8 @@ main{min-width:0;display:flex;flex-direction:column}
   padding:10px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
 }
 .top h1{margin:0;font-size:15px;font-weight:800;letter-spacing:-.015em;white-space:nowrap}
-.strip{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.strip{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:auto;
+  min-width:0;flex:0 1 auto;justify-content:flex-end}
 .stat{
   display:flex;align-items:baseline;gap:5px;background:var(--surface-2);border:1px solid var(--line);
   border-radius:var(--r);padding:3px 8px;font-family:var(--mono);font-size:11px;
@@ -1709,7 +1710,7 @@ pre.sql{
   /* The page's own identity, generated from api/src/version.ts. The API returns
    * the SAME literal from /health, which is the only reason comparing them
    * says anything — a page comparing itself to itself always agrees. */
-  window.__BUILD__ = { version: '0.3.0', stamp: '0823-1502', where: 'deployed' };
+  window.__BUILD__ = { version: '0.3.0', stamp: '0823-1548', where: 'deployed' };
   /* ── ONE LOGIN, NOT TWO ─────────────────────────────────────────────
    * The Angular admin keeps its JWT in localStorage under 'integrator_token'
    * (web/src/app/core/auth.service.ts). This page used to keep its own in
@@ -2060,7 +2061,7 @@ try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(S, JSON.pa
    carries a REAL stamp rather than the word "artifact", so a build line pasted
    from this copy is still traceable to a commit; `where` is what says which
    copy it came from. Bump it with the other three literals. */
-const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0823-1502', where: 'artifact' };
+const BUILD = window.__BUILD__ || { version: '0.3.0', stamp: '0823-1548', where: 'artifact' };
 
 const STORE = window.__PLAN_STORE__ || {
   kind: 'local',
