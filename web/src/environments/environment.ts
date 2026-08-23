@@ -12,5 +12,5 @@ export const environment = {
    * both and flags them when they disagree.
    */
   version: '0.3.0',
-  buildStamp: '0823-0135',
+  buildStamp: '0823-1339',
 };

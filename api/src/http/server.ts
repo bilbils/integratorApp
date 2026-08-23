@@ -5,6 +5,8 @@ import { consumerAppsRouter } from './routes/consumerApps.js';
 import { authRouter } from './routes/auth.js';
 import { planRouter } from './routes/plan.js';
 import { planOptionsRouter } from './routes/planOptions.js';
+import { planProbesRouter } from './routes/planProbes.js';
+import { planReconcileRouter } from './routes/planReconcile.js';
 import { VERSION, BUILD_STAMP } from '../version.js';
 import { config } from '../config.js';
 
@@ -51,6 +53,10 @@ export function createServer(): express.Express {
   // The options catalogue rides the same rule: admin only, applied inside the
   // router so a future mount cannot forget it.
   app.use('/api/v1/plan-options', planOptionsRouter);
+  // Probes ride the same prefix - they act on an option, not on a new noun.
+  app.use('/api/v1/plan-options', planProbesRouter);
+  // The reconciliation against Staffility's ADRs. Admin-only inside the router.
+  app.use('/api/v1/plan-reconcile', planReconcileRouter);
 
   // Central error handler: log the real error, return a clean 500 (never crash).
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
